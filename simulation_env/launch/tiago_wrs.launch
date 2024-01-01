@@ -43,6 +43,7 @@
     <!-- Start Gazebo world -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name" value="$(find tmc_wrs_gazebo_worlds)/worlds/$(arg world_suffix).world" />
+        <arg name="verbose" value="false" />
     </include>
 
     <!-- spawn robot in simulation -->
@@ -55,7 +56,7 @@
         <arg name="gzpose" value="$(arg robot_pos)"/>
     </include>
 
-      <!-- bring up robot -->
+    <!-- bring up robot -->
     <include file="$(find tiago_gazebo)/launch/simulation_tiago_bringup.launch">
         <arg name="arm" value="$(arg arm)"/>
         <arg name="end_effector" value="$(arg end_effector)"/>

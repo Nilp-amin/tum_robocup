@@ -37,7 +37,7 @@
 
     <!-- Set Gazebo environment variables to find the models contained in this package and the tiago library -->
     <env name="GAZEBO_MODEL_PATH"  
-         value="$(optenv GAZEBO_MODEL_PATH):$(find object_detection_world)/models:$(find tiago_gazebo)/models"/>
+         value="$(optenv GAZEBO_MODEL_PATH):$(find simulation_env)/models:$(find tiago_gazebo)/models"/>
     <env name="LC_NUMERIC" value="C" />
 
     <!-- Start Gazebo world -->
@@ -98,7 +98,7 @@
     <arg name="rviz"     default="true"/>
  	<!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find object_detection_world)/config/tiago_labels.rviz" required="true" /> -->
     <node name="rviz" pkg="rviz" type="rviz" if="$(arg rviz)"
-        args="-d $(find object_detection_world)/config/tiago_full.rviz"
+        args="-d $(find simulation_env)/config/tiago_full.rviz"
     />
 
 </launch>

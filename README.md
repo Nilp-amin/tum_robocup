@@ -16,6 +16,16 @@ cd ~
 mkdir -p catkin_ws/src && cd catkin_ws
 catkin build
 ```
+3. Clone [darknet_ros](https://github.com/leggedrobotics/darknet_ros) into the *catkin_ws* using the below commands.
+```
+cd ~/catkin_ws/src
+git clone --recursive git@github.com:leggedrobotics/darknet_ros.git
+cd ..
+```
+4. Clone the [tmc_wrs_gazebo_world](https://gitlab.lrz.de/robocup-home-ics/tutorials/-/wikis/uploads/T5_fengyi/tmc_wrs_gazebo_world.zip) into the *catkin_ws* using the below commands after unzipping.
+```
+mv <path-to-extracted-tmc_wrs_gazebo_world-folder> ~/catkin_ws/src
+```
 
 # Set Up
 Clone this repository into the *catkin_ws* that was created in the requirements step as follows:
@@ -23,6 +33,7 @@ Clone this repository into the *catkin_ws* that was created in the requirements 
 cd ~/catkin_ws/src
 git clone git@github.com:Nilp-amin/tum_robocup.git
 cd ..
+catkin build darknet_ros -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/gcc-8
 catkin build
 ```
 # Development

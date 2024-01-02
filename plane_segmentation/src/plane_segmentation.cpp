@@ -45,6 +45,8 @@ bool PlaneSegmentation::initalize(ros::NodeHandle& nh)
   //#>>>>TODO: advertise the pointcloud for the remaining points (objects)
   objects_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/objects_point_cloud", 10);
 
+  combined_cloud_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/combined_point_cloud", 10);
+
   plane_vertex_pub_ = nh.advertise<sensor_msgs::PointCloud2>("/table_vertices", 10);
 
   // Most PCL functions accept pointers as their arguments, as such we first set
@@ -83,6 +85,20 @@ void PlaneSegmentation::update(const ros::Time& time)
 
     plane_cloud_pub_.publish(plane_cloud_msg);
     objects_cloud_pub_.publish(objects_cloud_msg);
+
+    pcl::PCLPointCloud2::Ptr pclCloud0(new pcl::PCLPointCloud2);
+    pcl::PCLPointCloud2::Ptr pclCloud1(new pcl::PCLPointCloud2);
+    pcl::PCLPointCloud2::Ptr pclCloud2(new pcl::PCLPointCloud2);
+    pcl::toPCLPointCloud2(*plane_cloud_, *pclCloud1);
+    pcl::toPCLPointCloud2(*objects_cloud_, *pclCloud2);
+    pcl::PCLPointCloud2::concatenate(*pclCloud1, *pclCloud2, *pclCloud0);
+
+    PointCloud merged_cloud;
+    pcl::fromPCLPointCloud2(*pclCloud0, merged_cloud);
+
+    sensor_msgs::PointCloud2 combined_msg;
+    pcl::toROSMsg(merged_cloud, combined_msg);
+    combined_cloud_pub_.publish(combined_msg);
 
   }
 }

@@ -26,7 +26,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: Laser
+    SyncSource: RGBD
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -802,7 +802,7 @@ Visualization Manager:
       Marker Topic: /text_markers
       Name: ObjectClass
       Namespaces:
-        "": true
+        {}
       Queue Size: 100
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -1122,7 +1122,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.67069673538208
+      Distance: 9.290152549743652
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1130,17 +1130,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 3.1135900020599365
-        Y: -0.5593610405921936
-        Z: -0.2987786829471588
+        X: 2.1197662353515625
+        Y: 0.9772325754165649
+        Z: 0.39082589745521545
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7147971391677856
+      Pitch: 0.9397969245910645
       Target Frame: <Fixed Frame>
-      Yaw: 0.24091099202632904
+      Yaw: 5.5041022300720215
     Saved: ~
 Window Geometry:
   Displays:

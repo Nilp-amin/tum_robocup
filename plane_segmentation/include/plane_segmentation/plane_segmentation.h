@@ -128,6 +128,7 @@ private:
 
   ros::Publisher plane_cloud_pub_;    //!< Publish table point cloud
   ros::Publisher objects_cloud_pub_;  //!< Publish objects point cloud
+  ros::Publisher combined_cloud_pub_;
   ros::Publisher plane_vertex_pub_;
 
   // internal pointclouds

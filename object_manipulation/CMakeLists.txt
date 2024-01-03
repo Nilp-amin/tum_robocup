@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_msgs
   message_filters
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -109,7 +110,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES object_manipulation
- CATKIN_DEPENDS geometry_msgs gpd_ros roscpp rospy sensor_msgs std_msgs
+ CATKIN_DEPENDS geometry_msgs gpd_ros roscpp rospy sensor_msgs std_msgs tf
 #  DEPENDS system_lib
 )
 

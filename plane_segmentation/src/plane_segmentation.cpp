@@ -71,6 +71,11 @@ void PlaneSegmentation::update(const ros::Time& time)
     if(!preProcessCloud(raw_cloud_, preprocessed_cloud_))
       return;
 
+    // publish the preprocessed point cloud for gpd
+    sensor_msgs::PointCloud2 pre_processed_cloud_msg;
+    pcl::toROSMsg(*preprocessed_cloud_, pre_processed_cloud_msg);
+    combined_cloud_pub_.publish(pre_processed_cloud_msg);
+
     // segment cloud into table and objects
     if(!segmentCloud(preprocessed_cloud_, plane_cloud_, objects_cloud_))
       return;
@@ -85,21 +90,6 @@ void PlaneSegmentation::update(const ros::Time& time)
 
     plane_cloud_pub_.publish(plane_cloud_msg);
     objects_cloud_pub_.publish(objects_cloud_msg);
-
-    pcl::PCLPointCloud2::Ptr pclCloud0(new pcl::PCLPointCloud2);
-    pcl::PCLPointCloud2::Ptr pclCloud1(new pcl::PCLPointCloud2);
-    pcl::PCLPointCloud2::Ptr pclCloud2(new pcl::PCLPointCloud2);
-    pcl::toPCLPointCloud2(*plane_cloud_, *pclCloud1);
-    pcl::toPCLPointCloud2(*objects_cloud_, *pclCloud2);
-    pcl::PCLPointCloud2::concatenate(*pclCloud1, *pclCloud2, *pclCloud0);
-
-    PointCloud merged_cloud;
-    pcl::fromPCLPointCloud2(*pclCloud0, merged_cloud);
-
-    sensor_msgs::PointCloud2 combined_msg;
-    pcl::toROSMsg(merged_cloud, combined_msg);
-    combined_cloud_pub_.publish(combined_msg);
-
   }
 }
 

@@ -739,6 +739,7 @@ Visualization Manager:
           Twist: true
           Value: true
         TablePointCloud: true
+        TargetPose: true
         Value: true
       Zoom Factor: 1
     - Alpha: 1
@@ -802,7 +803,7 @@ Visualization Manager:
       Marker Topic: /text_markers
       Name: ObjectClass
       Namespaces:
-        {}
+        "": true
       Queue Size: 100
       Value: true
     - Class: moveit_rviz_plugin/PlanningScene
@@ -1094,6 +1095,14 @@ Visualization Manager:
       Topic: /cluster_centroid
       Unreliable: false
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /rviz_visual_tools
+      Name: TargetPose
+      Namespaces:
+        Axis: true
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -1122,7 +1131,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 9.290152549743652
+      Distance: 3.796658754348755
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -1130,17 +1139,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 2.1197662353515625
-        Y: 0.9772325754165649
-        Z: 0.39082589745521545
+        X: 2.193472385406494
+        Y: -1.0075019598007202
+        Z: -0.2626991868019104
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9397969245910645
+      Pitch: 0.9997968673706055
       Target Frame: <Fixed Frame>
-      Yaw: 5.5041022300720215
+      Yaw: 4.8040971755981445
     Saved: ~
 Window Geometry:
   Displays:

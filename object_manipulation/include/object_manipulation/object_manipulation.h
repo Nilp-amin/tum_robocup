@@ -3,17 +3,25 @@
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
+#include <tf2/LinearMath/Matrix3x3.h>
+#include <tf2/LinearMath/Quaternion.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 
-
 #include <gpd_ros/CloudSamples.h>
+#include <gpd_ros/GraspConfigList.h>
+
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit_visual_tools/moveit_visual_tools.h>
+
+#include <Eigen/Dense>
 
 #include <iostream>
 #include <string>
+#include <limits>
 
 class ObjectManipulation
 {
@@ -26,8 +34,13 @@ public:
     bool initalise(ros::NodeHandle& nh);
 
 private:
+    Eigen::Affine3d poseMsgToEigen(const geometry_msgs::Pose& pose_msg);
+    
+
     void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& labeled_msg,
                        const sensor_msgs::PointCloud2ConstPtr& camera_msg);
+
+    void graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg);
 
 private:
     std::string labeled_objects_cloud_topic_;   // labeled point cloud topic name
@@ -38,10 +51,14 @@ private:
     message_filters::Subscriber<sensor_msgs::PointCloud2> camera_point_cloud_sub_;
     boost::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_sub_;
 
+    ros::Subscriber gpd_ros_grasps_sub_;
+
     ros::Publisher gpd_ros_cloud_pub_;          // publisher to gpd_ros
 
     tf::TransformListener tf_listener_;         // access to tf tree for ros transformations
 
+    moveit::planning_interface::MoveGroupInterface move_group_;
+    moveit_visual_tools::MoveItVisualTools visual_tools_;
 };
 
 #endif

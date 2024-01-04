@@ -16,6 +16,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_filters
   tf
+  moveit_ros_planning_interface
+  moveit_visual_tools
 )
 
 ## System dependencies are found with CMake's conventions
@@ -110,7 +112,16 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
  INCLUDE_DIRS include
  LIBRARIES object_manipulation
- CATKIN_DEPENDS geometry_msgs gpd_ros roscpp rospy sensor_msgs std_msgs tf
+ CATKIN_DEPENDS 
+  geometry_msgs 
+  gpd_ros 
+  roscpp 
+  rospy 
+  sensor_msgs 
+  std_msgs 
+  tf 
+  moveit_ros_planning_interface
+  moveit_visual_tools
 #  DEPENDS system_lib
 )
 

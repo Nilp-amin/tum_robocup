@@ -6,15 +6,15 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // start async spinner for moveit
-    ros::AsyncSpinner spinner(2);
+    ros::AsyncSpinner spinner{1};
 
     std::string labeled_objects_cloud_topic{"/labeled_object_point_cloud"};
     std::string camera_cloud_topic{"/combined_point_cloud"};
 
-    ObjectManipulation manipulation{labeled_objects_cloud_topic, camera_cloud_topic};
+    ObjectManipulation manipulation{nh, labeled_objects_cloud_topic, camera_cloud_topic};
 
     // init
-    if (!manipulation.initalise(nh))
+    if (!manipulation.initalise())
     {
         return -1;
     }

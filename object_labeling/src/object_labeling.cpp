@@ -48,6 +48,7 @@ bool ObjectLabeling::initalize(ros::NodeHandle& nh)
   dict_["cup"] = 4;
   dict_["banana"] = 5;
   dict_["apple"] = 6;
+  dict_["traffic light"] = 7;
   // ... bananna, cup, apple, ...
 
   return true;

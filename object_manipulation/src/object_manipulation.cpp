@@ -7,10 +7,15 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   labeled_objects_cloud_topic_{labeled_objects_topic},
   camera_point_cloud_topic_{camera_point_cloud_topic},
   move_group_{"arm_torso"},
-  visual_tools_{"base_footprint"} {}
+  visual_tools_{"base_footprint"},
+  pickup_ac_{"/pickup", true} {}
 
 bool ObjectManipulation::initalise()
 {
+    ROS_INFO("Waiting for action server to start.");
+    pickup_ac_.waitForServer();
+    ROS_INFO("Action server started.");
+
     labeled_object_cloud_sub_.subscribe(nh_, labeled_objects_cloud_topic_, 10);
     camera_point_cloud_sub_.subscribe(nh_, camera_point_cloud_topic_, 10);
     sync_sub_.reset(new message_filters::Synchronizer<SyncPolicy>(SyncPolicy(10), labeled_object_cloud_sub_, camera_point_cloud_sub_));
@@ -23,9 +28,15 @@ bool ObjectManipulation::initalise()
     // set moveit configurations
     move_group_.setPlannerId("RRTConnectkConfigDefault");
     move_group_.setPlanningTime(2.0);
+    // move_group_.setGoalOrientationTolerance(deg2rad(10));
     visual_tools_.loadRobotStatePub("/display_robot_state");
 
     return true;
+}
+
+double ObjectManipulation::deg2rad(const double degrees)
+{
+    return degrees * M_PI / 180.0;
 }
 
 Eigen::Affine3d ObjectManipulation::poseMsgToEigen(const geometry_msgs::Pose& pose_msg)
@@ -51,6 +62,18 @@ Eigen::Affine3d ObjectManipulation::poseMsgToEigen(const geometry_msgs::Pose& po
 
 void ObjectManipulation::createPlanningScene(const std::string& label)
 {
+    ROS_INFO("Removing any previous collision objects.");
+    // remove attached object from pipeline
+    moveit_msgs::AttachedCollisionObject att_coll_object;
+    att_coll_object.object.id = "target";
+    att_coll_object.object.operation = att_coll_object.object.REMOVE;
+    planning_interface_.applyAttachedCollisionObject(att_coll_object);
+    planning_interface_.removeCollisionObjects(
+        planning_interface_.getKnownObjectNames()
+    );
+    ////TODO: do we need this?
+    ros::Duration(2.0).sleep();
+
     // obtain the currently detected labels
     visualization_msgs::MarkerArrayConstPtr labels = 
         ros::topic::waitForMessage<visualization_msgs::MarkerArray>(
@@ -111,16 +134,15 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         max_z = *(++iter_z);
 
         // Create a plane collision object
-        moveit_msgs::CollisionObject collision_object;
-        collision_object.header.frame_id = plane_verticies->header.frame_id;
-        collision_object.id = "plane_object";
+        moveit_msgs::CollisionObject plane_collision_object;
+        plane_collision_object.header.frame_id = plane_verticies->header.frame_id;
+        plane_collision_object.id = "plane";
 
         // define the pose of the box in the planning scene representing the plane
         geometry_msgs::Pose plane_pose;
         plane_pose.position.x = (max_x + min_x) / 2.0;
         plane_pose.position.y = (max_y + min_y) / 2.0;
-        // plane_pose.position.z = (max_z + min_z) / 2.0 - 0.02;
-        plane_pose.position.z = (max_z + min_z) / 2.0;
+        plane_pose.position.z = (max_z + min_z) / 2.0 - 0.03;
         plane_pose.orientation.w = 1.0;
 
         // define the shape of the plane box object
@@ -131,25 +153,159 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         plane_primitive.dimensions[plane_primitive.BOX_Y] = std::abs(max_y - min_y);
         plane_primitive.dimensions[plane_primitive.BOX_Z] = 0.05;
 
+        plane_collision_object.primitives.push_back(plane_primitive);
+        plane_collision_object.primitive_poses.push_back(plane_pose);
+
+        // create a target collision object
+        moveit_msgs::CollisionObject target_collision_object;
+        target_collision_object.header.frame_id = plane_verticies->header.frame_id;
+        target_collision_object.id = "target";
+
         // define the shape of the target box object
         shape_msgs::SolidPrimitive target_primitive;
         target_primitive.type = target_primitive.BOX;
         target_primitive.dimensions.resize(3);
-        target_primitive.dimensions[target_primitive.BOX_X] = 0.12;
-        target_primitive.dimensions[target_primitive.BOX_Y] = 0.12;
-        target_primitive.dimensions[target_primitive.BOX_Z] = 0.12;
+        target_primitive.dimensions[target_primitive.BOX_X] = 0.05;
+        target_primitive.dimensions[target_primitive.BOX_Y] = 0.05;
+        target_primitive.dimensions[target_primitive.BOX_Z] = 0.05;
 
-        collision_object.primitives.push_back(plane_primitive);
-        collision_object.primitive_poses.push_back(plane_pose);
-        collision_object.primitives.push_back(target_primitive);
-        collision_object.primitive_poses.push_back(target_object_pose);
+        target_collision_object.primitives.push_back(target_primitive);
+        target_collision_object.primitive_poses.push_back(target_object_pose);
 
         // add objects to the planning scene
-        planning_interface_.applyCollisionObject(collision_object);
+        planning_interface_.applyCollisionObject(plane_collision_object);
+        ROS_INFO("Added plane collision object.");
+        planning_interface_.applyCollisionObject(target_collision_object);
+        ROS_INFO("Added target collision object.");
     } else
     {
         ROS_ERROR("no collision objects added to planning scene");
     }
+}
+
+moveit_msgs::PickupGoal ObjectManipulation::createPickupGoal(const std::string& group,
+                                                             const std::string& target,
+                                                             const geometry_msgs::PoseStamped& grasp_pose,
+                                                             const std::vector<moveit_msgs::Grasp>& possible_grasps,
+                                                             const std::vector<std::string>& links_to_allow_contact)
+{
+    moveit_msgs::PickupGoal pug;
+    pug.target_name = target;
+    pug.group_name = group; 
+    pug.possible_grasps.insert(
+        pug.possible_grasps.begin(), 
+        possible_grasps.begin(), 
+        possible_grasps.end()
+    );
+    pug.allowed_planning_time = 35.0;
+    pug.planning_options.planning_scene_diff.is_diff = true;
+    pug.planning_options.planning_scene_diff.robot_state.is_diff = true;
+    pug.planning_options.plan_only = false;
+    pug.planning_options.replan = true;
+    pug.planning_options.replan_attempts = 1;
+    // pug.attached_object_touch_links.push_back("<octomap>");
+    pug.attached_object_touch_links.insert(
+        pug.attached_object_touch_links.begin(),
+        links_to_allow_contact.begin(),
+        links_to_allow_contact.end()
+    );
+
+    return pug;
+}
+
+std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::GraspConfigListConstPtr& grasps_msg)
+{
+    std::vector<moveit_msgs::Grasp> grasps;
+
+    for (size_t idx{0}; idx < grasps_msg->grasps.size(); ++idx)
+    {
+        gpd_ros::GraspConfig grasp{grasps_msg->grasps[idx]};
+
+        moveit_msgs::Grasp moveit_grasp;
+        moveit_grasp.id = "grasp_" + std::to_string(idx);
+
+        trajectory_msgs::JointTrajectory pre_grasp_posture;
+        pre_grasp_posture.header.frame_id = "arm_tool_link";
+        pre_grasp_posture.joint_names.push_back("gripper_left_finger_joint");
+        pre_grasp_posture.joint_names.push_back("gripper_right_finger_joint");
+
+        trajectory_msgs::JointTrajectoryPoint jt_point;
+        jt_point.time_from_start = ros::Duration(2.0);
+        jt_point.positions.push_back(0.05);
+        jt_point.positions.push_back(0.05);
+        pre_grasp_posture.points.push_back(jt_point);
+
+        trajectory_msgs::JointTrajectory grasp_posture{pre_grasp_posture};
+        grasp_posture.points[0].time_from_start += ros::Duration(2.0);
+        trajectory_msgs::JointTrajectoryPoint jt_point2;
+        jt_point2.time_from_start = ros::Duration(6.0);
+        jt_point2.positions.push_back(0.01);
+        jt_point2.positions.push_back(0.01);
+        grasp_posture.points.push_back(jt_point2);
+
+        moveit_grasp.pre_grasp_posture = pre_grasp_posture;
+        moveit_grasp.grasp_posture = grasp_posture;
+
+        geometry_msgs::PoseStamped grasp_pose;
+        grasp_pose.header.frame_id = "base_footprint";
+        grasp_pose.pose.position.x = grasp.position.x;
+        grasp_pose.pose.position.y = grasp.position.y;
+        grasp_pose.pose.position.z = grasp.position.z;
+
+        // convert vectors to rotation matrix
+        tf2::Matrix3x3 rotation_matrix{
+            grasp.approach.x, grasp.binormal.x, grasp.axis.x,
+            grasp.approach.y, grasp.binormal.y, grasp.axis.y,
+            grasp.approach.z, grasp.binormal.z, grasp.axis.z,
+        };
+
+        // fix the rotation of the gripper from gpd_ros to Tiago's convention
+        tf2::Quaternion quaternion;
+        rotation_matrix.getRotation(quaternion);
+        // rotation about x-axis by -90 deg
+        tf2::Vector3 axis{1.0, 0.0, 0.0};
+        quaternion *= tf2::Quaternion(axis, -M_PI_2);
+
+        grasp_pose.pose.orientation.x = quaternion.x();
+        grasp_pose.pose.orientation.y = quaternion.y();
+        grasp_pose.pose.orientation.z = quaternion.z();
+        grasp_pose.pose.orientation.w = quaternion.w();
+
+        // shift target pose back slightly to avoid gripper collision
+        Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
+        Eigen::Vector3d shift_x_axis{-0.1, 0.0, 0.0};
+        auto shifted_position = T_base_target * shift_x_axis;
+        grasp_pose.pose.position.x = shifted_position.x();
+        grasp_pose.pose.position.y = shifted_position.y();
+        grasp_pose.pose.position.z = shifted_position.z();
+
+        moveit_grasp.grasp_pose = grasp_pose;
+        moveit_grasp.grasp_quality = grasp.score.data;
+
+        ////TODO: check this is correct
+        moveit_grasp.pre_grasp_approach.direction.header.frame_id = "arm_tool_link";
+        moveit_grasp.pre_grasp_approach.direction.vector.x = 1.0;
+        moveit_grasp.pre_grasp_approach.direction.vector.y = 0.0;
+        moveit_grasp.pre_grasp_approach.direction.vector.z = 0.0;
+        moveit_grasp.pre_grasp_approach.desired_distance = 0.15;
+        moveit_grasp.pre_grasp_approach.min_distance = 0.0;
+        ////TODO: check this is correct
+        moveit_grasp.post_grasp_retreat.direction.header.frame_id = "arm_tool_link";
+        moveit_grasp.post_grasp_retreat.direction.vector.x = -1.0;
+        moveit_grasp.post_grasp_retreat.direction.vector.y = 0.0;
+        moveit_grasp.post_grasp_retreat.direction.vector.z = 0.0;
+        moveit_grasp.post_grasp_retreat.desired_distance = 0.15;
+        moveit_grasp.post_grasp_retreat.min_distance = 0.0;
+
+        moveit_grasp.max_contact_force = 0.0;
+
+        grasps.push_back(moveit_grasp);
+        ROS_INFO_STREAM("inserted grasp configuration with score: " 
+            << grasp.score
+        );
+    }
+
+    return grasps;
 }
 
 void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& labeled_cloud_msg,
@@ -210,87 +366,130 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
 
 void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
 {
-    size_t idx{0};
-    bool success{false};
-    while (success == false && idx < msg->grasps.size())
-    {
-        ROS_INFO_STREAM("selected grasp configuration with score: " << msg->grasps[idx].score);
-        gpd_ros::GraspConfig grasp{msg->grasps[idx]};
-
-        // set up a pose goal
-        geometry_msgs::Pose target_pose;
-        target_pose.position.x = grasp.position.x;
-        target_pose.position.y = grasp.position.y;
-        // target_pose.position.z = grasp.position.z + 0.2;
-        target_pose.position.z = grasp.position.z;
-
-        // convert vectors to rotation matrix
-        tf2::Matrix3x3 rotation_matrix{
-            grasp.approach.x, grasp.binormal.x, grasp.axis.x,
-            grasp.approach.y, grasp.binormal.y, grasp.axis.y,
-            grasp.approach.z, grasp.binormal.z, grasp.axis.z,
-        };
-
-        // convert the rotation matrix into a quaternion
-        tf2::Quaternion quaternion;
-        rotation_matrix.getRotation(quaternion);
-
-        tf2::Vector3 axis{1.0, 0.0, 0.0};
-        double angle = M_PI / 2.0;
-
-        quaternion *= tf2::Quaternion(axis, -angle);
-
-        target_pose.orientation.x = quaternion.x();
-        target_pose.orientation.y = quaternion.y();
-        target_pose.orientation.z = quaternion.z();
-        target_pose.orientation.w = quaternion.w();
-
-        // before transformation
-        visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
-
-        // obtain the transformation matrix from the base to the end effector 
-        Eigen::Affine3d T_base_target = poseMsgToEigen(target_pose);
-        // shift the target pose along its own x-axis by 0.12m
-        Eigen::Vector3d shift_x_axis{-0.25, 0.0, 0.0};
-        auto shifted_position = T_base_target * shift_x_axis;
-        target_pose.position.x = shifted_position.x();
-        target_pose.position.y = shifted_position.y();
-        target_pose.position.z = shifted_position.z();
-
-        move_group_.setPoseTarget(target_pose);
-        visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
-        visual_tools_.trigger();
-
-        // generate planning scene
-        ////TODO: make it generalised
-        createPlanningScene("cup");
-
-        moveit::planning_interface::MoveGroupInterface::Plan move_plan;
-        success = (move_group_.plan(move_plan) == moveit::core::MoveItErrorCode::SUCCESS);
-        ROS_INFO("plan (pose goal) %s", success ? "SUCCESS" : "FAILED");
-
-        if (success)
+    ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
+    createPlanningScene("cup");
+    std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
+    moveit_msgs::PickupGoal goal = createPickupGoal(
+        "arm_torso",
+        "target",
+        geometry_msgs::PoseStamped{},
+        possible_grasps,
         {
-            move_group_.execute(move_plan);
-
-            ////TODO: now move along an axis towards the object
-            planning_interface_.removeCollisionObjects(planning_interface_.getKnownObjectNames());
-            shift_x_axis[0] = 0.13;
-            T_base_target = poseMsgToEigen(target_pose);
-            shifted_position = T_base_target * shift_x_axis;
-            target_pose.position.x = shifted_position.x();
-            target_pose.position.y = shifted_position.y();
-            target_pose.position.z = shifted_position.z();
-            move_group_.setPoseTarget(target_pose);
-            move_group_.move();
+            "gripper_left_finger_link",
+            "gripper_right_finger_link",
+            "gripper_link"
         }
-        idx++;
-    }
-
-    if (success == false)
-    {
-        ROS_ERROR("No grasp pose was possible for this object.");
-    }
-    // planning_interface_.removeCollisionObjects(planning_interface_.getKnownObjectNames());
-
+    );
+    ROS_INFO("Sending goal.");
+    pickup_ac_.sendGoal(goal);
+    ROS_INFO("Waiting for result.");
+    bool success = pickup_ac_.waitForResult();
+    ROS_INFO("Pick result: %s", success ? "SUCCESS" : "FAILED");
 }
+
+// void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
+// {
+//     size_t idx{0};
+//     bool success{false};
+//     while (success == false && idx < msg->grasps.size())
+//     {
+//         ROS_INFO_STREAM("selected grasp configuration with score: " << msg->grasps[idx].score);
+//         gpd_ros::GraspConfig grasp{msg->grasps[idx]};
+
+//         // set up a pose goal
+//         geometry_msgs::Pose target_pose;
+//         target_pose.position.x = grasp.position.x;
+//         target_pose.position.y = grasp.position.y;
+//         // target_pose.position.z = grasp.position.z + 0.2;
+//         target_pose.position.z = grasp.position.z;
+
+//         // convert vectors to rotation matrix
+//         tf2::Matrix3x3 rotation_matrix{
+//             grasp.approach.x, grasp.binormal.x, grasp.axis.x,
+//             grasp.approach.y, grasp.binormal.y, grasp.axis.y,
+//             grasp.approach.z, grasp.binormal.z, grasp.axis.z,
+//         };
+
+//         // convert the rotation matrix into a quaternion
+//         tf2::Quaternion quaternion;
+//         rotation_matrix.getRotation(quaternion);
+
+//         tf2::Vector3 axis{1.0, 0.0, 0.0};
+//         double angle = M_PI / 2.0;
+
+//         quaternion *= tf2::Quaternion(axis, -angle);
+
+//         target_pose.orientation.x = quaternion.x();
+//         target_pose.orientation.y = quaternion.y();
+//         target_pose.orientation.z = quaternion.z();
+//         target_pose.orientation.w = quaternion.w();
+
+//         // before transformation
+//         visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
+
+//         // obtain the transformation matrix from the base to the end effector 
+//         Eigen::Affine3d T_base_target = poseMsgToEigen(target_pose);
+//         // shift the target pose along its own x-axis by 0.12m
+//         Eigen::Vector3d shift_x_axis{-0.25, 0.0, 0.0};
+//         auto shifted_position = T_base_target * shift_x_axis;
+//         target_pose.position.x = shifted_position.x();
+//         target_pose.position.y = shifted_position.y();
+//         target_pose.position.z = shifted_position.z();
+
+//         move_group_.setPoseTarget(target_pose);
+//         visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
+//         visual_tools_.trigger();
+
+//         // generate planning scene
+//         ////TODO: make it generalised
+//         // createPlanningScene("cup");
+//         createPlanningScene("traffic light");
+
+//         moveit::planning_interface::MoveGroupInterface::Plan move_plan;
+//         success = (move_group_.plan(move_plan) == moveit::core::MoveItErrorCode::SUCCESS);
+//         ROS_INFO("plan (pose goal) %s", success ? "SUCCESS" : "FAILED");
+
+//         // if failed try and plan based on 180 deg rotation about x-axis
+//         if (!success)
+//         {
+//             quaternion *= tf2::Quaternion(axis, -M_PI);
+//             target_pose.orientation.x = quaternion.x();
+//             target_pose.orientation.y = quaternion.y();
+//             target_pose.orientation.z = quaternion.z();
+//             target_pose.orientation.w = quaternion.w();
+
+//             visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
+//             visual_tools_.trigger();
+
+//             success = (move_group_.plan(move_plan) == moveit::core::MoveItErrorCode::SUCCESS);
+//             ROS_INFO("plan @ 180 (pose goal) %s", success ? "SUCCESS" : "FAILED");
+//         }
+
+
+//         move_group_.setPoseTarget(target_pose);
+
+//         if (success)
+//         {
+//             move_group_.execute(move_plan);
+
+//             ////TODO: now move along an axis towards the object
+//             planning_interface_.removeCollisionObjects(planning_interface_.getKnownObjectNames());
+//             shift_x_axis[0] = 0.13;
+//             T_base_target = poseMsgToEigen(target_pose);
+//             shifted_position = T_base_target * shift_x_axis;
+//             target_pose.position.x = shifted_position.x();
+//             target_pose.position.y = shifted_position.y();
+//             target_pose.position.z = shifted_position.z();
+//             move_group_.setPoseTarget(target_pose);
+//             move_group_.move();
+//         }
+//         idx++;
+//     }
+
+//     if (success == false)
+//     {
+//         ROS_ERROR("No grasp pose was possible for this object.");
+//     }
+//     // planning_interface_.removeCollisionObjects(planning_interface_.getKnownObjectNames());
+
+// }

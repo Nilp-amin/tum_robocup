@@ -142,7 +142,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         geometry_msgs::Pose plane_pose;
         plane_pose.position.x = (max_x + min_x) / 2.0;
         plane_pose.position.y = (max_y + min_y) / 2.0;
-        plane_pose.position.z = (max_z + min_z) / 2.0 - 0.03;
+        plane_pose.position.z = (max_z + min_z) / 2.0 - 0.025;
         plane_pose.orientation.w = 1.0;
 
         // define the shape of the plane box object
@@ -165,9 +165,9 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         shape_msgs::SolidPrimitive target_primitive;
         target_primitive.type = target_primitive.BOX;
         target_primitive.dimensions.resize(3);
-        target_primitive.dimensions[target_primitive.BOX_X] = 0.05;
-        target_primitive.dimensions[target_primitive.BOX_Y] = 0.05;
-        target_primitive.dimensions[target_primitive.BOX_Z] = 0.05;
+        target_primitive.dimensions[target_primitive.BOX_X] = 0.08;
+        target_primitive.dimensions[target_primitive.BOX_Y] = 0.08;
+        target_primitive.dimensions[target_primitive.BOX_Z] = 0.08;
 
         target_collision_object.primitives.push_back(target_primitive);
         target_collision_object.primitive_poses.push_back(target_object_pose);
@@ -346,7 +346,8 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
     for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_label)
     {
         ////TODO: for now we only try and detect a cup, which is labeled as 4 
-        if (*iter_label == 4)
+        // if (*iter_label == 4)
+        if (*iter_label == 7)
         {
             geometry_msgs::Point sample_point;
             sample_point.x = *iter_x;
@@ -367,7 +368,8 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
 void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
 {
     ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
-    createPlanningScene("cup");
+    // createPlanningScene("cup");
+    createPlanningScene("traffic light");
     std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
     moveit_msgs::PickupGoal goal = createPickupGoal(
         "arm_torso",

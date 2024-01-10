@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
-  <node name="object_manipulation_node" pkg="object_manipulation" type="object_manipulation_node" output="screen"/>
-  
+  <node name="object_manipulation_node" pkg="object_manipulation" type="object_manipulation_node" output="screen">
+    <rosparam command="load" file="$(find object_manipulation)/config/pick_and_place_params.yaml"/>
+  </node>
 </launch>

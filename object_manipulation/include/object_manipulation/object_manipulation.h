@@ -39,7 +39,8 @@ public:
 public:
     ObjectManipulation(ros::NodeHandle& nh,
                        const std::string& labeled_objects_topic,
-                       const std::string& camera_point_cloud_topic);
+                       const std::string& camera_point_cloud_topic,
+                       const std::string& target_label_topic);
 
     bool initalise();
 
@@ -68,6 +69,7 @@ private:
 
     std::string labeled_objects_cloud_topic_;                                   // labeled point cloud topic name
     std::string camera_point_cloud_topic_;                                      // camera point cloud topic name
+    std::string target_label_topic_;                                            // target label topic
 
     tf::TransformListener tf_listener_;                                         // access to tf tree for ros transformations
 
@@ -85,6 +87,34 @@ private:
     ros::Subscriber gpd_ros_grasps_sub_;                                        // subscriber to gpd_ros of optimal grasps
 
     ros::Publisher gpd_ros_cloud_pub_;                                          // publisher to gpd_ros
+
+private:
+    std::vector<std::string> gripper_joint_names_;
+    std::vector<float> gripper_pre_grasp_positions_;
+    std::vector<float> gripper_grasp_positions_;
+
+    float time_pre_grasp_posture_;
+    float time_grasp_posture_;
+    float time_grasp_posture_final_;
+
+    std::string grasp_postures_frame_id_;
+    std::string grasp_pose_frame_id_;
+
+    float grasp_desired_distance_;
+    float grasp_min_distance_;
+
+    float pre_grasp_direction_x_;
+    float pre_grasp_direction_y_;
+    float pre_grasp_direction_z_;
+
+    float post_grasp_direction_x_;
+    float post_grasp_direction_y_;
+    float post_grasp_direction_z_;
+
+    float max_contact_force_;
+    std::vector<std::string> allowed_touch_objects_;
+
+    std::vector<std::string> links_to_allow_contact_;
 };
 
 #endif

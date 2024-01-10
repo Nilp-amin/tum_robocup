@@ -2,16 +2,39 @@
 
 ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
                                        const std::string& labeled_objects_topic,
-                                       const std::string& camera_point_cloud_topic)
+                                       const std::string& camera_point_cloud_topic,
+                                       const std::string& target_label_topic)
 : nh_{nh},
   labeled_objects_cloud_topic_{labeled_objects_topic},
   camera_point_cloud_topic_{camera_point_cloud_topic},
+  target_label_topic_{target_label_topic},
   move_group_{"arm_torso"},
   visual_tools_{"base_footprint"},
   pickup_ac_{"/pickup", true} {}
 
 bool ObjectManipulation::initalise()
 {
+    ROS_INFO("Loading rosparams.");
+    if (!ros::param::get("/object_manipulation_node/gripper_joint_names", gripper_joint_names_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/gripper_pre_grasp_positions", gripper_pre_grasp_positions_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/gripper_grasp_positions", gripper_grasp_positions_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/time_pre_grasp_posture", time_pre_grasp_posture_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/time_grasp_posture", time_grasp_posture_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/time_grasp_posture_final", time_grasp_posture_final_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/grasp_postures_frame_id", grasp_postures_frame_id_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/grasp_pose_frame_id", grasp_pose_frame_id_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/grasp_desired_distance", grasp_desired_distance_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/grasp_min_distance", grasp_min_distance_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/pre_grasp_direction_x", pre_grasp_direction_x_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/pre_grasp_direction_y", pre_grasp_direction_y_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/pre_grasp_direction_z", pre_grasp_direction_z_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/post_grasp_direction_x", post_grasp_direction_x_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/post_grasp_direction_y", post_grasp_direction_y_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/post_grasp_direction_z", post_grasp_direction_z_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/max_contact_force", max_contact_force_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/allowed_touch_objects", allowed_touch_objects_)) { return false; }
+    if (!ros::param::get("/object_manipulation_node/links_to_allow_contact", links_to_allow_contact_)) { return false; }
+
     ROS_INFO("Waiting for action server to start.");
     pickup_ac_.waitForServer();
     ROS_INFO("Action server started.");
@@ -203,7 +226,7 @@ moveit_msgs::PickupGoal ObjectManipulation::createPickupGoal(const std::string& 
     pug.planning_options.plan_only = false;
     pug.planning_options.replan = true;
     pug.planning_options.replan_attempts = 1;
-    // pug.attached_object_touch_links.push_back("<octomap>");
+    pug.attached_object_touch_links.push_back("<octomap>");
     pug.attached_object_touch_links.insert(
         pug.attached_object_touch_links.begin(),
         links_to_allow_contact.begin(),
@@ -225,29 +248,40 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         moveit_grasp.id = "grasp_" + std::to_string(idx);
 
         trajectory_msgs::JointTrajectory pre_grasp_posture;
-        pre_grasp_posture.header.frame_id = "arm_tool_link";
-        pre_grasp_posture.joint_names.push_back("gripper_left_finger_joint");
-        pre_grasp_posture.joint_names.push_back("gripper_right_finger_joint");
+        pre_grasp_posture.header.frame_id = grasp_postures_frame_id_;
+        pre_grasp_posture.joint_names.insert(
+            pre_grasp_posture.joint_names.begin(),
+            gripper_joint_names_.begin(),
+            gripper_joint_names_.end()
+        );
 
         trajectory_msgs::JointTrajectoryPoint jt_point;
-        jt_point.time_from_start = ros::Duration(2.0);
-        jt_point.positions.push_back(0.05);
-        jt_point.positions.push_back(0.05);
+        jt_point.time_from_start = ros::Duration(time_pre_grasp_posture_);
+        jt_point.positions.insert(
+            jt_point.positions.begin(),
+            gripper_pre_grasp_positions_.begin(),
+            gripper_pre_grasp_positions_.end()
+        );
         pre_grasp_posture.points.push_back(jt_point);
 
         trajectory_msgs::JointTrajectory grasp_posture{pre_grasp_posture};
-        grasp_posture.points[0].time_from_start += ros::Duration(2.0);
+        grasp_posture.points[0].time_from_start += ros::Duration(time_grasp_posture_);
         trajectory_msgs::JointTrajectoryPoint jt_point2;
-        jt_point2.time_from_start = ros::Duration(6.0);
-        jt_point2.positions.push_back(0.01);
-        jt_point2.positions.push_back(0.01);
+        jt_point2.time_from_start = ros::Duration(
+            time_pre_grasp_posture_ + time_grasp_posture_ + time_grasp_posture_final_
+        );
+        jt_point2.positions.insert(
+            jt_point2.positions.begin(),
+            gripper_grasp_positions_.begin(),
+            gripper_grasp_positions_.end()
+        );
         grasp_posture.points.push_back(jt_point2);
 
         moveit_grasp.pre_grasp_posture = pre_grasp_posture;
         moveit_grasp.grasp_posture = grasp_posture;
 
         geometry_msgs::PoseStamped grasp_pose;
-        grasp_pose.header.frame_id = "base_footprint";
+        grasp_pose.header.frame_id = grasp_pose_frame_id_;
         grasp_pose.pose.position.x = grasp.position.x;
         grasp_pose.pose.position.y = grasp.position.y;
         grasp_pose.pose.position.z = grasp.position.z;
@@ -273,7 +307,7 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
 
         // shift target pose back slightly to avoid gripper collision
         Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
-        Eigen::Vector3d shift_x_axis{-0.1, 0.0, 0.0};
+        Eigen::Vector3d shift_x_axis{-0.15, 0.0, 0.0};
         auto shifted_position = T_base_target * shift_x_axis;
         grasp_pose.pose.position.x = shifted_position.x();
         grasp_pose.pose.position.y = shifted_position.y();
@@ -282,22 +316,22 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         moveit_grasp.grasp_pose = grasp_pose;
         moveit_grasp.grasp_quality = grasp.score.data;
 
-        ////TODO: check this is correct
-        moveit_grasp.pre_grasp_approach.direction.header.frame_id = "arm_tool_link";
-        moveit_grasp.pre_grasp_approach.direction.vector.x = 1.0;
-        moveit_grasp.pre_grasp_approach.direction.vector.y = 0.0;
-        moveit_grasp.pre_grasp_approach.direction.vector.z = 0.0;
-        moveit_grasp.pre_grasp_approach.desired_distance = 0.15;
-        moveit_grasp.pre_grasp_approach.min_distance = 0.0;
-        ////TODO: check this is correct
-        moveit_grasp.post_grasp_retreat.direction.header.frame_id = "arm_tool_link";
-        moveit_grasp.post_grasp_retreat.direction.vector.x = -1.0;
-        moveit_grasp.post_grasp_retreat.direction.vector.y = 0.0;
-        moveit_grasp.post_grasp_retreat.direction.vector.z = 0.0;
-        moveit_grasp.post_grasp_retreat.desired_distance = 0.15;
-        moveit_grasp.post_grasp_retreat.min_distance = 0.0;
+        moveit_grasp.pre_grasp_approach.direction.header.frame_id = grasp_postures_frame_id_;
+        moveit_grasp.pre_grasp_approach.direction.vector.x = pre_grasp_direction_x_;
+        moveit_grasp.pre_grasp_approach.direction.vector.y = pre_grasp_direction_y_;
+        moveit_grasp.pre_grasp_approach.direction.vector.z = pre_grasp_direction_z_;
+        moveit_grasp.pre_grasp_approach.desired_distance = grasp_desired_distance_;
+        moveit_grasp.pre_grasp_approach.min_distance = grasp_min_distance_;
 
-        moveit_grasp.max_contact_force = 0.0;
+        moveit_grasp.post_grasp_retreat.direction.header.frame_id = grasp_postures_frame_id_;
+        moveit_grasp.post_grasp_retreat.direction.vector.x = post_grasp_direction_x_;
+        moveit_grasp.post_grasp_retreat.direction.vector.y = post_grasp_direction_y_;
+        moveit_grasp.post_grasp_retreat.direction.vector.z = post_grasp_direction_z_;
+        moveit_grasp.post_grasp_retreat.desired_distance = grasp_desired_distance_;
+        moveit_grasp.post_grasp_retreat.min_distance = grasp_min_distance_;
+
+        moveit_grasp.max_contact_force = max_contact_force_;
+        moveit_grasp.allowed_touch_objects = allowed_touch_objects_;
 
         grasps.push_back(moveit_grasp);
         ROS_INFO_STREAM("inserted grasp configuration with score: " 
@@ -311,6 +345,8 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
 void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& labeled_cloud_msg,
                                        const sensor_msgs::PointCloud2ConstPtr& camera_cloud_msg)
 {
+    ROS_INFO("Point clouds recieved.");
+
     // obtain the camera position at the provided cloud_msg timestamp
     tf::StampedTransform T_base_camera;
     tf_listener_.lookupTransform(
@@ -343,44 +379,45 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
     sensor_msgs::PointCloud2ConstIterator<float> iter_z(*labeled_cloud_msg, "z");
     sensor_msgs::PointCloud2ConstIterator<int> iter_label(*labeled_cloud_msg, "label");
 
-    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_label)
+    ROS_INFO("Obtaining id of pickup target.");
+    std_msgs::Int64ConstPtr target_label = 
+        ros::topic::waitForMessage<std_msgs::Int64>(target_label_topic_, nh_, ros::Duration(5.0));
+    if (target_label != nullptr)
     {
-        ////TODO: for now we only try and detect a cup, which is labeled as 4 
-        // if (*iter_label == 4)
-        if (*iter_label == 7)
+        ROS_INFO_STREAM("Obtained pickup target id: " << target_label->data);
+        for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_label)
         {
-            geometry_msgs::Point sample_point;
-            sample_point.x = *iter_x;
-            sample_point.y = *iter_y;
-            sample_point.z = *iter_z;
-            gpd_cloud_samples_msg.samples.push_back(sample_point);
+            if (*iter_label == target_label->data)
+            {
+                geometry_msgs::Point sample_point;
+                sample_point.x = *iter_x;
+                sample_point.y = *iter_y;
+                sample_point.z = *iter_z;
+                gpd_cloud_samples_msg.samples.push_back(sample_point);
+            }
         }
-    }
 
-    // publish to gpd_ros
-    if (gpd_cloud_samples_msg.samples.size() > 0)
-    {
-        gpd_ros_cloud_pub_.publish(gpd_cloud_samples_msg);
-        // std::cout << "Published cloud sample" << std::endl;
+        // publish to gpd_ros
+        if (gpd_cloud_samples_msg.samples.size() > 0)
+        {
+            ROS_INFO("Publishing point cloud to gpd_ros.");
+            gpd_ros_cloud_pub_.publish(gpd_cloud_samples_msg);
+        }
     }
 }
 
 void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
 {
     ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
-    // createPlanningScene("cup");
-    createPlanningScene("traffic light");
+    createPlanningScene("cup");
+    // createPlanningScene("traffic light");
     std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
     moveit_msgs::PickupGoal goal = createPickupGoal(
         "arm_torso",
         "target",
         geometry_msgs::PoseStamped{},
         possible_grasps,
-        {
-            "gripper_left_finger_link",
-            "gripper_right_finger_link",
-            "gripper_link"
-        }
+        links_to_allow_contact_
     );
     ROS_INFO("Sending goal.");
     pickup_ac_.sendGoal(goal);
@@ -388,110 +425,3 @@ void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& 
     bool success = pickup_ac_.waitForResult();
     ROS_INFO("Pick result: %s", success ? "SUCCESS" : "FAILED");
 }
-
-// void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
-// {
-//     size_t idx{0};
-//     bool success{false};
-//     while (success == false && idx < msg->grasps.size())
-//     {
-//         ROS_INFO_STREAM("selected grasp configuration with score: " << msg->grasps[idx].score);
-//         gpd_ros::GraspConfig grasp{msg->grasps[idx]};
-
-//         // set up a pose goal
-//         geometry_msgs::Pose target_pose;
-//         target_pose.position.x = grasp.position.x;
-//         target_pose.position.y = grasp.position.y;
-//         // target_pose.position.z = grasp.position.z + 0.2;
-//         target_pose.position.z = grasp.position.z;
-
-//         // convert vectors to rotation matrix
-//         tf2::Matrix3x3 rotation_matrix{
-//             grasp.approach.x, grasp.binormal.x, grasp.axis.x,
-//             grasp.approach.y, grasp.binormal.y, grasp.axis.y,
-//             grasp.approach.z, grasp.binormal.z, grasp.axis.z,
-//         };
-
-//         // convert the rotation matrix into a quaternion
-//         tf2::Quaternion quaternion;
-//         rotation_matrix.getRotation(quaternion);
-
-//         tf2::Vector3 axis{1.0, 0.0, 0.0};
-//         double angle = M_PI / 2.0;
-
-//         quaternion *= tf2::Quaternion(axis, -angle);
-
-//         target_pose.orientation.x = quaternion.x();
-//         target_pose.orientation.y = quaternion.y();
-//         target_pose.orientation.z = quaternion.z();
-//         target_pose.orientation.w = quaternion.w();
-
-//         // before transformation
-//         visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
-
-//         // obtain the transformation matrix from the base to the end effector 
-//         Eigen::Affine3d T_base_target = poseMsgToEigen(target_pose);
-//         // shift the target pose along its own x-axis by 0.12m
-//         Eigen::Vector3d shift_x_axis{-0.25, 0.0, 0.0};
-//         auto shifted_position = T_base_target * shift_x_axis;
-//         target_pose.position.x = shifted_position.x();
-//         target_pose.position.y = shifted_position.y();
-//         target_pose.position.z = shifted_position.z();
-
-//         move_group_.setPoseTarget(target_pose);
-//         visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
-//         visual_tools_.trigger();
-
-//         // generate planning scene
-//         ////TODO: make it generalised
-//         // createPlanningScene("cup");
-//         createPlanningScene("traffic light");
-
-//         moveit::planning_interface::MoveGroupInterface::Plan move_plan;
-//         success = (move_group_.plan(move_plan) == moveit::core::MoveItErrorCode::SUCCESS);
-//         ROS_INFO("plan (pose goal) %s", success ? "SUCCESS" : "FAILED");
-
-//         // if failed try and plan based on 180 deg rotation about x-axis
-//         if (!success)
-//         {
-//             quaternion *= tf2::Quaternion(axis, -M_PI);
-//             target_pose.orientation.x = quaternion.x();
-//             target_pose.orientation.y = quaternion.y();
-//             target_pose.orientation.z = quaternion.z();
-//             target_pose.orientation.w = quaternion.w();
-
-//             visual_tools_.publishAxis(target_pose, rviz_visual_tools::LARGE);
-//             visual_tools_.trigger();
-
-//             success = (move_group_.plan(move_plan) == moveit::core::MoveItErrorCode::SUCCESS);
-//             ROS_INFO("plan @ 180 (pose goal) %s", success ? "SUCCESS" : "FAILED");
-//         }
-
-
-//         move_group_.setPoseTarget(target_pose);
-
-//         if (success)
-//         {
-//             move_group_.execute(move_plan);
-
-//             ////TODO: now move along an axis towards the object
-//             planning_interface_.removeCollisionObjects(planning_interface_.getKnownObjectNames());
-//             shift_x_axis[0] = 0.13;
-//             T_base_target = poseMsgToEigen(target_pose);
-//             shifted_position = T_base_target * shift_x_axis;
-//             target_pose.position.x = shifted_position.x();
-//             target_pose.position.y = shifted_position.y();
-//             target_pose.position.z = shifted_position.z();
-//             move_group_.setPoseTarget(target_pose);
-//             move_group_.move();
-//         }
-//         idx++;
-//     }
-
-//     if (success == false)
-//     {
-//         ROS_ERROR("No grasp pose was possible for this object.");
-//     }
-//     // planning_interface_.removeCollisionObjects(planning_interface_.getKnownObjectNames());
-
-// }

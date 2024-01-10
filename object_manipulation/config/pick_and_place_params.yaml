@@ -35,4 +35,4 @@ post_grasp_direction_z: 0.0
 max_contact_force: 0.0
 allowed_touch_objects: []
 
-# links_to_allow_contact: ["gripper_left_finger_link", "gripper_right_finger_link", "gripper_link"]
+links_to_allow_contact: ["gripper_left_finger_link", "gripper_right_finger_link", "gripper_link"]

@@ -3,7 +3,7 @@
 <launch>
   <!-- Console launch prefix -->
   <arg name="launch_prefix" default=""/>
-  <arg name="image" default="/xtion/rgb/image_raw" />
+  <arg name="image" default="/hsrb/head_rgbd_sensor/rgb/image_rect_color" />
   <arg name="bag" default="table_test"/>
 
   <!-- Config and weights folder. -->

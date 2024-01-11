@@ -2,7 +2,7 @@
 
 <launch>
 
-  <param name="point_cloud_topic" value="/xtion/depth_registered/points" />
+  <param name="point_cloud_topic" value="/hsrb/head_rgbd_sensor/depth_registered/rectified_points" />
   <param name="base_frame" value="base_footprint" />
 
   <rosparam command="load" file="$(find plane_segmentation)/launch/config/config.yaml" />

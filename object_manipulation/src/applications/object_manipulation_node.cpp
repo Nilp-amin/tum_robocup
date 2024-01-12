@@ -6,7 +6,8 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     // start async spinner for moveit
-    ros::AsyncSpinner spinner{1};
+    ros::AsyncSpinner spinner{5};
+    spinner.start();
 
     std::string labeled_objects_cloud_topic{"/labeled_object_point_cloud"};
     std::string camera_cloud_topic{"/combined_point_cloud"};
@@ -23,7 +24,6 @@ int main(int argc, char** argv)
 
     // run
     ros::Rate rate{30};
-    spinner.start();
     while (ros::ok())
     {
         ros::spinOnce();

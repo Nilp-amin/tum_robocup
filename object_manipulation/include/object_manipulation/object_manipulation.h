@@ -2,6 +2,7 @@
 #define OBJECT_MANIPULATION_H
 
 #include <ros/ros.h>
+#include <std_srvs/Empty.h>
 #include <tf/transform_listener.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2/LinearMath/Quaternion.h>
@@ -74,10 +75,13 @@ private:
     tf::TransformListener tf_listener_;                                         // access to tf tree for ros transformations
 
     moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface
+    moveit::planning_interface::MoveGroupInterface move_gripper_;                 // moveit move interface
     moveit::planning_interface::PlanningSceneInterface planning_interface_;     // moveit planning scene interface
     moveit_visual_tools::MoveItVisualTools visual_tools_;
 
     actionlib::SimpleActionClient<moveit_msgs::PickupAction> pickup_ac_;
+
+    ros::ServiceClient octomap_client_;
 
     // synchronised subscribers required for gpd
     message_filters::Subscriber<sensor_msgs::PointCloud2> labeled_object_cloud_sub_;

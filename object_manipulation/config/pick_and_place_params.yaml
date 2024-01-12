@@ -2,9 +2,9 @@
 gripper_joint_names: ["hand_motor_joint"]
 
 # Gripper pre_grasp joint positions (same order as joint_names)
-gripper_pre_grasp_positions: [1.2]
+gripper_pre_grasp_positions: [0.8]
 # Gripper grasp joint positions (same order as joint_names)
-gripper_grasp_positions: [0.0]
+gripper_grasp_positions: [0.2]
 
 # Time for the pre_grasp gripper posture to be achieved
 time_pre_grasp_posture: 2.0
@@ -19,7 +19,7 @@ grasp_postures_frame_id: "hand_palm_link"
 grasp_pose_frame_id: "base_footprint"
 
 # grasp desired distance for pre grasp, post grasp and place
-grasp_desired_distance: 0.15
+grasp_desired_distance: 0.10
 # grasp min distance for pre grasp, post grasp and place
 grasp_min_distance: 0.0
 
@@ -41,5 +41,7 @@ links_to_allow_contact: [
   "hand_l_spring_proximal_link",
   "hand_r_distal_link", 
   "hand_r_spring_proximal_link",
-  "hand_palm_link"
+  "hand_palm_link",
+  "hand_l_finger_vacuum_frame",
+  "<octomap>"
 ]

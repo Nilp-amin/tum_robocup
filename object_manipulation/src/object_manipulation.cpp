@@ -8,7 +8,8 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   labeled_objects_cloud_topic_{labeled_objects_topic},
   camera_point_cloud_topic_{camera_point_cloud_topic},
   target_label_topic_{target_label_topic},
-  move_group_{"whole_body_weighted"},
+  move_group_{"whole_body"},
+  move_gripper_{"gripper"},
   visual_tools_{"base_footprint"},
   pickup_ac_{"/pickup", true} {}
 
@@ -48,10 +49,18 @@ bool ObjectManipulation::initalise()
 
     gpd_ros_cloud_pub_ = nh_.advertise<gpd_ros::CloudSamples>("/cloud_stitched", 10);
 
+    octomap_client_ = nh_.serviceClient<std_srvs::Empty>("/clear_octomap");
+
     // set moveit configurations
     move_group_.setPlannerId("RRTConnectkConfigDefault");
-    move_group_.setPlanningTime(2.0);
+    // move_group_.setWorkspace(-10, -10, -10, 10, 10, 10);
+    move_group_.setPoseReferenceFrame(grasp_pose_frame_id_);
+    // move_group_.setPlanningTime(2.0);
     // move_group_.setGoalOrientationTolerance(deg2rad(10));
+
+    // move_gripper_.setJointValueTarget("hand_motor_joint", 0.5);
+    // move_gripper_.asyncMove();
+
     visual_tools_.loadRobotStatePub("/display_robot_state");
 
     return true;
@@ -94,6 +103,8 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
     planning_interface_.removeCollisionObjects(
         planning_interface_.getKnownObjectNames()
     );
+    std_srvs::Empty octomap_srv;
+    octomap_client_.call(octomap_srv);
     ////TODO: do we need this?
     ros::Duration(2.0).sleep();
 
@@ -226,7 +237,7 @@ moveit_msgs::PickupGoal ObjectManipulation::createPickupGoal(const std::string& 
     pug.planning_options.plan_only = false;
     pug.planning_options.replan = true;
     pug.planning_options.replan_attempts = 1;
-    pug.attached_object_touch_links.push_back("<octomap>");
+    // pug.attached_object_touch_links.push_back("<octomap>");
     pug.attached_object_touch_links.insert(
         pug.attached_object_touch_links.begin(),
         links_to_allow_contact.begin(),
@@ -305,6 +316,10 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         tf2::Quaternion y_quaternion;
         y_quaternion.setRPY(0.0, M_PI_2, 0.0);
         quaternion *= y_quaternion;
+        // rotate about z-axis by 180 deg
+        // tf2::Quaternion z_quaternion;
+        // z_quaternion.setRPY(0.0, 0.0, M_PI);
+        // quaternion *= z_quaternion;
 
         grasp_pose.pose.orientation.x = quaternion.x();
         grasp_pose.pose.orientation.y = quaternion.y();
@@ -313,8 +328,8 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
 
         // shift target pose back slightly to avoid gripper collision
         Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
-        Eigen::Vector3d shift_x_axis{-0.15, 0.0, 0.0};
-        auto shifted_position = T_base_target * shift_x_axis;
+        Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.15};
+        auto shifted_position = T_base_target * shift_z_axis;
         grasp_pose.pose.position.x = shifted_position.x();
         grasp_pose.pose.position.y = shifted_position.y();
         grasp_pose.pose.position.z = shifted_position.z();
@@ -339,11 +354,15 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         moveit_grasp.max_contact_force = max_contact_force_;
         moveit_grasp.allowed_touch_objects = allowed_touch_objects_;
 
+        // visual_tools_.publishAxis(grasp_pose.pose, rviz_visual_tools::LARGE);
+
         grasps.push_back(moveit_grasp);
         ROS_INFO_STREAM("inserted grasp configuration with score: " 
             << grasp.score
         );
     }
+    
+    // visual_tools_.trigger();
 
     return grasps;
 }
@@ -357,7 +376,7 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
     tf::StampedTransform T_base_camera;
     tf_listener_.lookupTransform(
         "base_footprint",
-        "xtion_rgb_optical_frame",
+        "head_rgbd_sensor_rgb_frame",
         ros::Time(0),
         T_base_camera
     );
@@ -415,19 +434,22 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
 void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
 {
     ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
+    move_group_.setStartStateToCurrentState();
     createPlanningScene("cup");
     // createPlanningScene("traffic light");
     std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
     moveit_msgs::PickupGoal goal = createPickupGoal(
-        "arm_torso",
+        "whole_body",
         "target",
         geometry_msgs::PoseStamped{},
         possible_grasps,
         links_to_allow_contact_
     );
     ROS_INFO("Sending goal.");
-    pickup_ac_.sendGoal(goal);
+    auto result = move_group_.pick(goal);
+    // pickup_ac_.sendGoal(goal);
     ROS_INFO("Waiting for result.");
-    bool success = pickup_ac_.waitForResult();
-    ROS_INFO("Pick result: %s", success ? "SUCCESS" : "FAILED");
+    // bool success = pickup_ac_.waitForResult();
+    // ROS_INFO("Pick result: %s", success ? "SUCCESS" : "FAILED");
+    ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");
 }

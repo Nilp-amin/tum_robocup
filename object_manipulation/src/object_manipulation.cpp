@@ -8,7 +8,7 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   labeled_objects_cloud_topic_{labeled_objects_topic},
   camera_point_cloud_topic_{camera_point_cloud_topic},
   target_label_topic_{target_label_topic},
-  move_group_{"arm_torso"},
+  move_group_{"whole_body_weighted"},
   visual_tools_{"base_footprint"},
   pickup_ac_{"/pickup", true} {}
 
@@ -293,12 +293,18 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
             grasp.approach.z, grasp.binormal.z, grasp.axis.z,
         };
 
+        ////TODO: x: 180 deg y = 90 deg
         // fix the rotation of the gripper from gpd_ros to Tiago's convention
         tf2::Quaternion quaternion;
         rotation_matrix.getRotation(quaternion);
-        // rotation about x-axis by -90 deg
-        tf2::Vector3 axis{1.0, 0.0, 0.0};
-        quaternion *= tf2::Quaternion(axis, -M_PI_2);
+        // rotate about x-axis by 180 deg
+        tf2::Quaternion x_quaternion;
+        x_quaternion.setRPY(M_PI, 0.0, 0.0);
+        quaternion *= x_quaternion;
+        // rotate about y-axis by 90 deg
+        tf2::Quaternion y_quaternion;
+        y_quaternion.setRPY(0.0, M_PI_2, 0.0);
+        quaternion *= y_quaternion;
 
         grasp_pose.pose.orientation.x = quaternion.x();
         grasp_pose.pose.orientation.y = quaternion.y();

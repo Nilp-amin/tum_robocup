@@ -1,9 +1,10 @@
-gripper_joint_names: ["gripper_left_finger_joint", "gripper_right_finger_joint"]
+# gripper_joint_names: ["hand_l_spring_proximal_joint", "hand_r_spring_proximal_joint"]
+gripper_joint_names: ["hand_motor_joint"]
 
 # Gripper pre_grasp joint positions (same order as joint_names)
-gripper_pre_grasp_positions: [0.05, 0.05]
+gripper_pre_grasp_positions: [1.2]
 # Gripper grasp joint positions (same order as joint_names)
-gripper_grasp_positions: [0.01, 0.01]
+gripper_grasp_positions: [0.0]
 
 # Time for the pre_grasp gripper posture to be achieved
 time_pre_grasp_posture: 2.0
@@ -13,7 +14,7 @@ time_grasp_posture: 2.0
 time_grasp_posture_final: 2.0
 
 # pre_grasp_posture and grasp_posture frame_id, usually the tool (previous to the gripper)
-grasp_postures_frame_id: "arm_tool_link"
+grasp_postures_frame_id: "hand_palm_link"
 # grasp pose frame_id is the frame where the object pose is expressed
 grasp_pose_frame_id: "base_footprint"
 
@@ -23,16 +24,22 @@ grasp_desired_distance: 0.15
 grasp_min_distance: 0.0
 
 # Direction in reference of the grasp_postures_frame_id
-pre_grasp_direction_x: 1.0
+pre_grasp_direction_x: 0.0
 pre_grasp_direction_y: 0.0
-pre_grasp_direction_z: 0.0
+pre_grasp_direction_z: 1.0
 
 # Direction in reference of the grasp_postures_frame_id
-post_grasp_direction_x: -1.0
+post_grasp_direction_x: 0.0
 post_grasp_direction_y: 0.0
-post_grasp_direction_z: 0.0
+post_grasp_direction_z: 1.0
 
 max_contact_force: 0.0
 allowed_touch_objects: []
 
-links_to_allow_contact: ["gripper_left_finger_link", "gripper_right_finger_link", "gripper_link"]
+links_to_allow_contact: [
+  "hand_l_distal_link", 
+  "hand_l_spring_proximal_link",
+  "hand_r_distal_link", 
+  "hand_r_spring_proximal_link",
+  "hand_palm_link"
+]

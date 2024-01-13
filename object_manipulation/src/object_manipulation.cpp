@@ -8,7 +8,7 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   labeled_objects_cloud_topic_{labeled_objects_topic},
   camera_point_cloud_topic_{camera_point_cloud_topic},
   target_label_topic_{target_label_topic},
-  move_group_{"whole_body_weighted"},
+  move_group_{"whole_body_light"},
   move_gripper_{"gripper"},
   visual_tools_{"base_footprint"},
   pickup_ac_{"/pickup", true} {}
@@ -199,9 +199,9 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         shape_msgs::SolidPrimitive target_primitive;
         target_primitive.type = target_primitive.BOX;
         target_primitive.dimensions.resize(3);
-        target_primitive.dimensions[target_primitive.BOX_X] = 0.05;
-        target_primitive.dimensions[target_primitive.BOX_Y] = 0.05;
-        target_primitive.dimensions[target_primitive.BOX_Z] = 0.05;
+        target_primitive.dimensions[target_primitive.BOX_X] = 0.03;
+        target_primitive.dimensions[target_primitive.BOX_Y] = 0.03;
+        target_primitive.dimensions[target_primitive.BOX_Z] = 0.15;
 
         target_collision_object.primitives.push_back(target_primitive);
         target_collision_object.primitive_poses.push_back(target_object_pose);
@@ -455,11 +455,11 @@ void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& 
 {
     ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
     move_group_.setStartStateToCurrentState();
-    createPlanningScene("cup");
-    // createPlanningScene("traffic light");
+    // createPlanningScene("cup");
+    createPlanningScene("bottle");
     std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
     moveit_msgs::PickupGoal goal = createPickupGoal(
-        "whole_body_weighted",
+        "whole_body_light",
         "target",
         geometry_msgs::PoseStamped{},
         possible_grasps,

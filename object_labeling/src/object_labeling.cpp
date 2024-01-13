@@ -88,6 +88,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   //#>>>>TODO: Use EuclideanClusterExtraction to seperate the pointcloud into clusters
   //#>>>>Hint: https://pcl.readthedocs.io/projects/tutorials/en/master/cluster_extraction.html?highlight=EuclideanClusterExtraction
 
+  ROS_INFO("Setting up KDTree.");
   // create the KD tree for the search method of the clustring
   pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
   tree->setInputCloud(input);
@@ -102,6 +103,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   ec.setInputCloud(input);
   ec.extract(cluster_indices);
 
+  ROS_INFO("Obtaining centroids.");
   //#>>>>TODO: Iterate over each cluster and compute its centroid point (= mean)
   //#>>>>TODO: Push the centroid into the vector of centroids
   std::vector<Eigen::Vector3d> centroids;
@@ -137,6 +139,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   //#>>>>Hint: look up the transformation through the tf tree: tfListener_.lookupTransform(...)
   //#>>>>TODO: Convert the tf::StampedTransform into an Eigen::Affine3d
   //#>>>>Hint: tf::transformTFToEigen(...) can do the job
+  ROS_INFO("Transforming point cloud into camera frame.");
   Eigen::Affine3d T_base_camera; // = ?;
   tf::StampedTransform transform;
   tfListener_.lookupTransform("base_footprint", camera_frame_, ros::Time(0), transform);
@@ -156,6 +159,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   //#>>>>Hint: Multiplying a 3d vector with the 3x3 camera matrix gives a vector in R^3
   //#>>>>Hint: To get pixel coordinates in R^2 you need to convert them to homogenous 2d coordinates
   //#>>>>Hint: ( = divide by the last component and drop the one in third component.)
+  ROS_INFO("Projecting centroids into the camera plane.");
   std::vector<Eigen::Vector2d> pixel_centroids; // = ?
   for (const auto& centroid : centroids_camera)
   {
@@ -173,6 +177,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   //#>>>>Hint: For each bounding box find the closest cenroid 
   //#>>>>TODO: If a cluster cant be matched (no bounding boxes left) assign 0 as label
 
+  ROS_INFO("Finding best match between centroids and detections.");
   std::vector<int> assigned_labels(cluster_indices.size(), 0);                  // lables of each centroid
   std::vector<std::string> assigned_classes(cluster_indices.size(), "unknown"); // class names of each centroid
 
@@ -183,10 +188,10 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
 
     //#>>>>TODO: For all cenroids compute the distance to the boudning box
     //#>>>>TODO: select the clostes as match and get its index in pixel_centroids
-    int match; // = ?
+    int match{-1}; // = ?
     double closest_distance = std::numeric_limits<double>::max();
     Eigen::Vector2d bounding_box_centroid{(bounding_box.xmax + bounding_box.xmin)/2.0, (bounding_box.ymax + bounding_box.ymin)/2.0};
-    for (size_t j = 0; j < pixel_centroids.size(); j++)
+    for (size_t j = 0; j < pixel_centroids.size(); ++j)
     {
       double distance = (pixel_centroids[j] - bounding_box_centroid).norm();
       if (distance < closest_distance)
@@ -198,13 +203,14 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
     }
 
     // remember the label of match
-    if(dict_.find(bounding_box.Class) != dict_.end())
+    if(match != -1 && dict_.find(bounding_box.Class) != dict_.end())
     {
       assigned_labels[match] = dict_[bounding_box.Class]; // set match to defined class index
       assigned_classes[match] = bounding_box.Class;       // set match to class name
     }
   }
 
+  ROS_INFO("Relabelling point cloud for publishing.");
   // relabel the point cloud
   output->points.clear();
   output->header = input->header;
@@ -267,6 +273,8 @@ void ObjectLabeling::detectionCallback(const darknet_ros_msgs::BoundingBoxesCons
 
 void ObjectLabeling::cameraInfoCallback(const sensor_msgs::CameraInfoConstPtr &msg)
 {
+  if (!has_camera_info_) { ROS_INFO("Recieved camera info msg."); }
+
   // copy camera info
   has_camera_info_ = true;
   Eigen::Matrix3d K = Eigen::Matrix3d::Zero();

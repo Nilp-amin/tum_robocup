@@ -8,7 +8,7 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   labeled_objects_cloud_topic_{labeled_objects_topic},
   camera_point_cloud_topic_{camera_point_cloud_topic},
   target_label_topic_{target_label_topic},
-  move_group_{"whole_body"},
+  move_group_{"whole_body_weighted"},
   move_gripper_{"gripper"},
   visual_tools_{"base_footprint"},
   pickup_ac_{"/pickup", true} {}
@@ -40,14 +40,14 @@ bool ObjectManipulation::initalise()
     pickup_ac_.waitForServer();
     ROS_INFO("Action server started.");
 
-    labeled_object_cloud_sub_.subscribe(nh_, labeled_objects_cloud_topic_, 10);
-    camera_point_cloud_sub_.subscribe(nh_, camera_point_cloud_topic_, 10);
-    sync_sub_.reset(new message_filters::Synchronizer<SyncPolicy>(SyncPolicy(10), labeled_object_cloud_sub_, camera_point_cloud_sub_));
+    labeled_object_cloud_sub_.subscribe(nh_, labeled_objects_cloud_topic_, 1);
+    camera_point_cloud_sub_.subscribe(nh_, camera_point_cloud_topic_, 1);
+    sync_sub_.reset(new message_filters::Synchronizer<SyncPolicy>(SyncPolicy(1), labeled_object_cloud_sub_, camera_point_cloud_sub_));
     sync_sub_->registerCallback(boost::bind(&ObjectManipulation::cloudCallback, this, _1, _2));
 
     gpd_ros_grasps_sub_ = nh_.subscribe("/detect_grasps/clustered_grasps", 1, &ObjectManipulation::graspsCallback, this);
 
-    gpd_ros_cloud_pub_ = nh_.advertise<gpd_ros::CloudSamples>("/cloud_stitched", 10);
+    gpd_ros_cloud_pub_ = nh_.advertise<gpd_ros::CloudSamples>("/cloud_stitched", 1);
 
     octomap_client_ = nh_.serviceClient<std_srvs::Empty>("/clear_octomap");
 
@@ -176,7 +176,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         geometry_msgs::Pose plane_pose;
         plane_pose.position.x = (max_x + min_x) / 2.0;
         plane_pose.position.y = (max_y + min_y) / 2.0;
-        plane_pose.position.z = (max_z + min_z) / 2.0 - 0.025;
+        plane_pose.position.z = (max_z + min_z) / 2.0 - 0.04;
         plane_pose.orientation.w = 1.0;
 
         // define the shape of the plane box object
@@ -199,9 +199,9 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         shape_msgs::SolidPrimitive target_primitive;
         target_primitive.type = target_primitive.BOX;
         target_primitive.dimensions.resize(3);
-        target_primitive.dimensions[target_primitive.BOX_X] = 0.08;
-        target_primitive.dimensions[target_primitive.BOX_Y] = 0.08;
-        target_primitive.dimensions[target_primitive.BOX_Z] = 0.08;
+        target_primitive.dimensions[target_primitive.BOX_X] = 0.05;
+        target_primitive.dimensions[target_primitive.BOX_Y] = 0.05;
+        target_primitive.dimensions[target_primitive.BOX_Z] = 0.05;
 
         target_collision_object.primitives.push_back(target_primitive);
         target_collision_object.primitive_poses.push_back(target_object_pose);
@@ -275,17 +275,37 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         );
         pre_grasp_posture.points.push_back(jt_point);
 
-        trajectory_msgs::JointTrajectory grasp_posture{pre_grasp_posture};
-        grasp_posture.points[0].time_from_start += ros::Duration(time_grasp_posture_);
-        trajectory_msgs::JointTrajectoryPoint jt_point2;
-        jt_point2.time_from_start = ros::Duration(
-            time_pre_grasp_posture_ + time_grasp_posture_ + time_grasp_posture_final_
+        trajectory_msgs::JointTrajectory grasp_posture;
+        grasp_posture.header.frame_id = grasp_postures_frame_id_;
+        grasp_posture.joint_names.insert(
+            grasp_posture.joint_names.begin(),
+            gripper_joint_names_.begin(),
+            gripper_joint_names_.end()
         );
+        // grasp_posture.points[0].time_from_start += ros::Duration(time_grasp_posture_);
+        trajectory_msgs::JointTrajectoryPoint jt_point2;
+        jt_point2.time_from_start = ros::Duration(2.0);
+        jt_point2.effort = {-0.01};
         jt_point2.positions.insert(
             jt_point2.positions.begin(),
             gripper_grasp_positions_.begin(),
             gripper_grasp_positions_.end()
         );
+        // jt_point2.time_from_start = ros::Duration(
+        //     time_pre_grasp_posture_ + time_grasp_posture_ + time_grasp_posture_final_
+        // );
+
+        // trajectory_msgs::JointTrajectory grasp_posture{pre_grasp_posture};
+        // grasp_posture.points[0].time_from_start += ros::Duration(time_grasp_posture_);
+        // trajectory_msgs::JointTrajectoryPoint jt_point2;
+        // jt_point2.time_from_start = ros::Duration(
+        //     time_pre_grasp_posture_ + time_grasp_posture_ + time_grasp_posture_final_
+        // );
+        // jt_point2.positions.insert(
+        //     jt_point2.positions.begin(),
+        //     gripper_grasp_positions_.begin(),
+        //     gripper_grasp_positions_.end()
+        // );
         grasp_posture.points.push_back(jt_point2);
 
         moveit_grasp.pre_grasp_posture = pre_grasp_posture;
@@ -328,7 +348,7 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
 
         // shift target pose back slightly to avoid gripper collision
         Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
-        Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.15};
+        Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.0};
         auto shifted_position = T_base_target * shift_z_axis;
         grasp_pose.pose.position.x = shifted_position.x();
         grasp_pose.pose.position.y = shifted_position.y();
@@ -439,13 +459,15 @@ void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& 
     // createPlanningScene("traffic light");
     std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
     moveit_msgs::PickupGoal goal = createPickupGoal(
-        "whole_body",
+        "whole_body_weighted",
         "target",
         geometry_msgs::PoseStamped{},
         possible_grasps,
         links_to_allow_contact_
     );
     ROS_INFO("Sending goal.");
+    std_srvs::Empty octomap_srv;
+    octomap_client_.call(octomap_srv);
     auto result = move_group_.pick(goal);
     // pickup_ac_.sendGoal(goal);
     ROS_INFO("Waiting for result.");

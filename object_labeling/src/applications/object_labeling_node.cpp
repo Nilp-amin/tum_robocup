@@ -23,9 +23,10 @@ int main(int argc, char** argv)
 
   // Run
   ros::Rate rate(30);
+  ros::Duration(2.0).sleep();
   while(ros::ok())
   {
-    labeling.update(ros::Time::now());
+    labeling.update(ros::Time(0));
     ros::spinOnce();
     rate.sleep();
   }

@@ -10,7 +10,6 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   target_label_topic_{target_label_topic},
   move_group_{"whole_body_light"},
   move_gripper_{"gripper"},
-  visual_tools_{"base_footprint"},
   pickup_ac_{"/pickup", true} {}
 
 bool ObjectManipulation::initalise()
@@ -60,8 +59,6 @@ bool ObjectManipulation::initalise()
 
     // move_gripper_.setJointValueTarget("hand_motor_joint", 0.5);
     // move_gripper_.asyncMove();
-
-    visual_tools_.loadRobotStatePub("/display_robot_state");
 
     return true;
 }
@@ -324,7 +321,6 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
             grasp.approach.z, grasp.binormal.z, grasp.axis.z,
         };
 
-        ////TODO: x: 180 deg y = 90 deg
         // fix the rotation of the gripper from gpd_ros to Tiago's convention
         tf2::Quaternion quaternion;
         rotation_matrix.getRotation(quaternion);
@@ -336,23 +332,11 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         tf2::Quaternion y_quaternion;
         y_quaternion.setRPY(0.0, M_PI_2, 0.0);
         quaternion *= y_quaternion;
-        // rotate about z-axis by 180 deg
-        // tf2::Quaternion z_quaternion;
-        // z_quaternion.setRPY(0.0, 0.0, M_PI);
-        // quaternion *= z_quaternion;
 
         grasp_pose.pose.orientation.x = quaternion.x();
         grasp_pose.pose.orientation.y = quaternion.y();
         grasp_pose.pose.orientation.z = quaternion.z();
         grasp_pose.pose.orientation.w = quaternion.w();
-
-        // shift target pose back slightly to avoid gripper collision
-        Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
-        Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.0};
-        auto shifted_position = T_base_target * shift_z_axis;
-        grasp_pose.pose.position.x = shifted_position.x();
-        grasp_pose.pose.position.y = shifted_position.y();
-        grasp_pose.pose.position.z = shifted_position.z();
 
         moveit_grasp.grasp_pose = grasp_pose;
         moveit_grasp.grasp_quality = grasp.score.data;
@@ -374,16 +358,12 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         moveit_grasp.max_contact_force = max_contact_force_;
         moveit_grasp.allowed_touch_objects = allowed_touch_objects_;
 
-        // visual_tools_.publishAxis(grasp_pose.pose, rviz_visual_tools::LARGE);
-
         grasps.push_back(moveit_grasp);
         ROS_INFO_STREAM("inserted grasp configuration with score: " 
             << grasp.score
         );
     }
     
-    // visual_tools_.trigger();
-
     return grasps;
 }
 
@@ -469,9 +449,6 @@ void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& 
     std_srvs::Empty octomap_srv;
     octomap_client_.call(octomap_srv);
     auto result = move_group_.pick(goal);
-    // pickup_ac_.sendGoal(goal);
     ROS_INFO("Waiting for result.");
-    // bool success = pickup_ac_.waitForResult();
-    // ROS_INFO("Pick result: %s", success ? "SUCCESS" : "FAILED");
     ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");
 }

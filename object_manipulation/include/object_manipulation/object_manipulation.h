@@ -77,7 +77,6 @@ private:
     moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface
     moveit::planning_interface::MoveGroupInterface move_gripper_;                 // moveit move interface
     moveit::planning_interface::PlanningSceneInterface planning_interface_;     // moveit planning scene interface
-    moveit_visual_tools::MoveItVisualTools visual_tools_;
 
     actionlib::SimpleActionClient<moveit_msgs::PickupAction> pickup_ac_;
 

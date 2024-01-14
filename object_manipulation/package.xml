@@ -59,6 +59,8 @@
   <build_depend>moveit_ros_planning_interface</build_depend>
   <build_depend>moveit_visual_tools</build_depend>
   <build_depend>visualization_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+
   <build_export_depend>geometry_msgs</build_export_depend>
   <build_export_depend>gpd_ros</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
@@ -69,6 +71,7 @@
   <build_export_depend>moveit_ros_planning_interface</build_export_depend>
   <build_export_depend>moveit_visual_tools</build_export_depend>
   <build_export_depend>visualization_msgs</build_export_depend>
+
   <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>gpd_ros</exec_depend>
   <exec_depend>roscpp</exec_depend>
@@ -79,6 +82,7 @@
   <exec_depend>moveit_ros_planning_interface</exec_depend>
   <exec_depend>moveit_visual_tools</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>message_runtime</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

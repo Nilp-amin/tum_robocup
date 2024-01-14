@@ -3,7 +3,7 @@ Repo for the RoboCup@Home 2023 project at TUM. This repository contains a variet
 
 <!-- # Team members
 1. Nilp (Matrikel-Nr: 03784634) 
-2. Nikolas (Matrikel-Nr:)
+2. Niklas (Matrikel-Nr: 03714848)
 3. Sahil (Matrikel-Nr: ) -->
 
 # Requirements

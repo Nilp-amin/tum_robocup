@@ -8,7 +8,7 @@ Repo for the RoboCup@Home 2023 project at TUM. This repository contains a variet
 
 # Requirements
 To be able to use this repository the below requirements have to be met.
-1. The *tiago_public_ws* repository needs to be setup and built. This can be done by cloning the repository [locally](https://wiki.ros.org/Robots/TIAGo/Tutorials/Installation/InstallUbuntuAndROS) or setting up the [docker](https://wiki.ros.org/Robots/TIAGo/Tutorials/Installation/Installing_Tiago_tutorial_docker).
+1. The *hsrb development packages* needs to be setup and built. This can be done by following the instructions at [hsrb](https://docs.hsr.io/hsrb_user_manual_en/howto/pc_install.html).
 
 2. A seperate *catkin_ws* repository needs to be setup. This can be done by following the instructions below:
 ```
@@ -22,9 +22,24 @@ cd ~/catkin_ws/src
 git clone --recursive git@github.com:leggedrobotics/darknet_ros.git
 cd ..
 ```
-4. Clone the [tmc_wrs_gazebo_world](https://gitlab.lrz.de/robocup-home-ics/tutorials/-/wikis/uploads/T5_fengyi/tmc_wrs_gazebo_world.zip) into the *catkin_ws* using the below commands after unzipping.
+4. Setup [gpd_ros](https://github.com/atenpas/gpd_ros) by using the below commands.
 ```
-mv <path-to-extracted-tmc_wrs_gazebo_world-folder> ~/catkin_ws/src
+cd ~
+git clone https://github.com/atenpas/gpd
+cd gpd
+mkdir build && cd build
+cmake ..
+sudo make -j install
+cd ~/catkin_ws/src
+git clone https://github.com/atenpas/gpd_ros
+```
+5. Copy the [hsrb_wrs_gazebo](https://gitlab.lrz.de/robocup-home-ics/tutorials/-/wikis/uploads/T5_fengyi/hsrb_wrs_gazebo.zip) folder into the *catkin_ws* using the below commands after unzipping.
+```
+mv <path-to-extracted-hsrb_wrs_gazebo-folder> ~/catkin_ws/src
+```
+6. Copy the [hsrb_moveit](https://gitlab.lrz.de/robocup-home-ics/tutorials/-/wikis/uploads/T5_fengyi/hsrb_moveit.zip) folder into the *catkin_ws* using the below commands after unzipping.
+```
+mv <path-to-extracted-hsrb_moveit-folder> ~/catkin_ws/src
 ```
 
 # Set Up

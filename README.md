@@ -25,13 +25,13 @@ cd ..
 4. Setup [gpd_ros](https://github.com/atenpas/gpd_ros) by using the below commands.
 ```
 cd ~
-git clone https://github.com/atenpas/gpd
+git clone git@github.com:atenpas/gpd.git 
 cd gpd
 mkdir build && cd build
 cmake ..
 sudo make -j install
 cd ~/catkin_ws/src
-git clone https://github.com/atenpas/gpd_ros
+git clone git@github.com:atenpas/gpd_ros.git 
 ```
 5. Copy the [hsrb_wrs_gazebo](https://gitlab.lrz.de/robocup-home-ics/tutorials/-/wikis/uploads/T5_fengyi/hsrb_wrs_gazebo.zip) folder into the *catkin_ws* using the below commands after unzipping.
 ```

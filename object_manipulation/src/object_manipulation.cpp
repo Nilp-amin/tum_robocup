@@ -51,7 +51,7 @@ bool ObjectManipulation::initalise()
     octomap_client_ = nh_.serviceClient<std_srvs::Empty>("/clear_octomap");
 
     // set moveit configurations
-    move_group_.setPlannerId("RRTConnectkConfigDefault");
+    move_group_.setPlannerId("RRTstarkConfigDefault");
     // move_group_.setWorkspace(-10, -10, -10, 10, 10, 10);
     move_group_.setPoseReferenceFrame(grasp_pose_frame_id_);
     // move_group_.setPlanningTime(2.0);
@@ -122,6 +122,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
             {
                 target_object_found = true;
                 target_object_pose = labels->markers[i].pose;
+                target_object_pose.position.x += 0.025;
                 target_object_pose.position.z -= 0.1;
                 target_object_pose.orientation.x = 0.0;
                 target_object_pose.orientation.y = 0.0;
@@ -173,7 +174,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         geometry_msgs::Pose plane_pose;
         plane_pose.position.x = (max_x + min_x) / 2.0;
         plane_pose.position.y = (max_y + min_y) / 2.0;
-        plane_pose.position.z = (max_z + min_z) / 2.0 - 0.04;
+        plane_pose.position.z = -0.025;
         plane_pose.orientation.w = 1.0;
 
         // define the shape of the plane box object
@@ -196,9 +197,9 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         shape_msgs::SolidPrimitive target_primitive;
         target_primitive.type = target_primitive.BOX;
         target_primitive.dimensions.resize(3);
-        target_primitive.dimensions[target_primitive.BOX_X] = 0.03;
-        target_primitive.dimensions[target_primitive.BOX_Y] = 0.03;
-        target_primitive.dimensions[target_primitive.BOX_Z] = 0.15;
+        target_primitive.dimensions[target_primitive.BOX_X] = 0.02;
+        target_primitive.dimensions[target_primitive.BOX_Y] = 0.02;
+        target_primitive.dimensions[target_primitive.BOX_Z] = 0.02;
 
         target_collision_object.primitives.push_back(target_primitive);
         target_collision_object.primitive_poses.push_back(target_object_pose);
@@ -446,8 +447,8 @@ void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& 
         links_to_allow_contact_
     );
     ROS_INFO("Sending goal.");
-    std_srvs::Empty octomap_srv;
-    octomap_client_.call(octomap_srv);
+    // std_srvs::Empty octomap_srv;
+    // octomap_client_.call(octomap_srv);
     auto result = move_group_.pick(goal);
     ROS_INFO("Waiting for result.");
     ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");

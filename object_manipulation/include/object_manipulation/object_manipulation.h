@@ -74,11 +74,12 @@ private:
 
     tf::TransformListener tf_listener_;                                         // access to tf tree for ros transformations
 
-    moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface
-    moveit::planning_interface::MoveGroupInterface move_gripper_;                 // moveit move interface
+    moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface for whole body
+    moveit::planning_interface::MoveGroupInterface move_body_;                  // moveit move interface for body 
+    moveit::planning_interface::MoveGroupInterface move_head_;                  // moveit move interface for head
+    moveit::planning_interface::MoveGroupInterface move_arm_;                   // moveit move interface for arm
+    moveit::planning_interface::MoveGroupInterface move_gripper_;               // moveit move interface for gripper 
     moveit::planning_interface::PlanningSceneInterface planning_interface_;     // moveit planning scene interface
-
-    actionlib::SimpleActionClient<moveit_msgs::PickupAction> pickup_ac_;
 
     ros::ServiceClient octomap_client_;
 

@@ -9,8 +9,10 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
   camera_point_cloud_topic_{camera_point_cloud_topic},
   target_label_topic_{target_label_topic},
   move_group_{"whole_body_light"},
-  move_gripper_{"gripper"},
-  pickup_ac_{"/pickup", true} {}
+  move_body_{"base"},
+  move_head_{"head"},
+  move_arm_{"arm"},
+  move_gripper_{"gripper"} {}
 
 bool ObjectManipulation::initalise()
 {
@@ -35,9 +37,7 @@ bool ObjectManipulation::initalise()
     if (!ros::param::get("/object_manipulation_node/allowed_touch_objects", allowed_touch_objects_)) { return false; }
     if (!ros::param::get("/object_manipulation_node/links_to_allow_contact", links_to_allow_contact_)) { return false; }
 
-    ROS_INFO("Waiting for action server to start.");
-    pickup_ac_.waitForServer();
-    ROS_INFO("Action server started.");
+    ROS_INFO("Initalising rostopics.");
 
     labeled_object_cloud_sub_.subscribe(nh_, labeled_objects_cloud_topic_, 1);
     camera_point_cloud_sub_.subscribe(nh_, camera_point_cloud_topic_, 1);
@@ -52,13 +52,7 @@ bool ObjectManipulation::initalise()
 
     // set moveit configurations
     move_group_.setPlannerId("RRTstarkConfigDefault");
-    // move_group_.setWorkspace(-10, -10, -10, 10, 10, 10);
     move_group_.setPoseReferenceFrame(grasp_pose_frame_id_);
-    // move_group_.setPlanningTime(2.0);
-    // move_group_.setGoalOrientationTolerance(deg2rad(10));
-
-    // move_gripper_.setJointValueTarget("hand_motor_joint", 0.5);
-    // move_gripper_.asyncMove();
 
     return true;
 }
@@ -92,7 +86,6 @@ Eigen::Affine3d ObjectManipulation::poseMsgToEigen(const geometry_msgs::Pose& po
 void ObjectManipulation::createPlanningScene(const std::string& label)
 {
     ROS_INFO("Removing any previous collision objects.");
-    // remove attached object from pipeline
     moveit_msgs::AttachedCollisionObject att_coll_object;
     att_coll_object.object.id = "target";
     att_coll_object.object.operation = att_coll_object.object.REMOVE;
@@ -102,7 +95,6 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
     );
     std_srvs::Empty octomap_srv;
     octomap_client_.call(octomap_srv);
-    ////TODO: do we need this?
     ros::Duration(2.0).sleep();
 
     // obtain the currently detected labels
@@ -235,7 +227,6 @@ moveit_msgs::PickupGoal ObjectManipulation::createPickupGoal(const std::string& 
     pug.planning_options.plan_only = false;
     pug.planning_options.replan = true;
     pug.planning_options.replan_attempts = 1;
-    // pug.attached_object_touch_links.push_back("<octomap>");
     pug.attached_object_touch_links.insert(
         pug.attached_object_touch_links.begin(),
         links_to_allow_contact.begin(),
@@ -280,7 +271,6 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
             gripper_joint_names_.begin(),
             gripper_joint_names_.end()
         );
-        // grasp_posture.points[0].time_from_start += ros::Duration(time_grasp_posture_);
         trajectory_msgs::JointTrajectoryPoint jt_point2;
         jt_point2.time_from_start = ros::Duration(2.0);
         jt_point2.effort = {-0.01};
@@ -289,21 +279,6 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
             gripper_grasp_positions_.begin(),
             gripper_grasp_positions_.end()
         );
-        // jt_point2.time_from_start = ros::Duration(
-        //     time_pre_grasp_posture_ + time_grasp_posture_ + time_grasp_posture_final_
-        // );
-
-        // trajectory_msgs::JointTrajectory grasp_posture{pre_grasp_posture};
-        // grasp_posture.points[0].time_from_start += ros::Duration(time_grasp_posture_);
-        // trajectory_msgs::JointTrajectoryPoint jt_point2;
-        // jt_point2.time_from_start = ros::Duration(
-        //     time_pre_grasp_posture_ + time_grasp_posture_ + time_grasp_posture_final_
-        // );
-        // jt_point2.positions.insert(
-        //     jt_point2.positions.begin(),
-        //     gripper_grasp_positions_.begin(),
-        //     gripper_grasp_positions_.end()
-        // );
         grasp_posture.points.push_back(jt_point2);
 
         moveit_grasp.pre_grasp_posture = pre_grasp_posture;
@@ -447,8 +422,6 @@ void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& 
         links_to_allow_contact_
     );
     ROS_INFO("Sending goal.");
-    // std_srvs::Empty octomap_srv;
-    // octomap_client_.call(octomap_srv);
     auto result = move_group_.pick(goal);
     ROS_INFO("Waiting for result.");
     ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");

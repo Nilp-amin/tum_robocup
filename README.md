@@ -37,11 +37,6 @@ git clone git@github.com:atenpas/gpd_ros.git
 ```
 mv <path-to-extracted-hsrb_wrs_gazebo-folder> ~/catkin_ws/src
 ```
-6. Copy the [hsrb_moveit](https://gitlab.lrz.de/robocup-home-ics/tutorials/-/wikis/uploads/T5_fengyi/hsrb_moveit.zip) folder into the *catkin_ws* using the below commands after unzipping.
-```
-mv <path-to-extracted-hsrb_moveit-folder> ~/catkin_ws/src
-```
-
 # Set Up
 Clone this repository into the *catkin_ws* that was created in the requirements step as follows:
 ```

@@ -46,6 +46,14 @@ cd ..
 catkin build darknet_ros -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=/usr/bin/gcc-8
 catkin build
 ```
+
+## Download custom network weights
+Download the weights from 
+https://drive.google.com/file/d/1yZSaTLOWRaDS9rBSHwXwhvXUmixQYYU1/view?usp=sharing
+
+and put them into catkin_ws/src/tum_robocup/object_detection_world/config$
+
+
 # Development
 When working on your own tasks make sure to work on your own branch to avoid conflicts with another developer's codebase.
 

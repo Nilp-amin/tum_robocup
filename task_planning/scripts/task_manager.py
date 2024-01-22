@@ -88,6 +88,9 @@ if __name__ == "__main__":
                                           "objects_found_count_out" : "objects_found_count"})
         
         # optimise the order in which to pickup and dropoff objects
+        # TODO: creates a list in pickup order and contains all information
+        # about locations to try in case failure of pickup, and drop off
+        # locations
         smach.StateMachine.add("OPTIMISE", Optimise(),
                                transitions={"succeeded" : "NAVIGATE_TO_PICKUP"},
                                remapping={"pickup_info" : "pickup_info"})
@@ -117,7 +120,8 @@ if __name__ == "__main__":
                                SimpleActionState("move_base",
                                                  MoveBaseAction,
                                                  goal_cb=nav_dropoff_cb,
-                                                 input_keys=["current_pickup_index"],
+                                                 input_keys=["pickup_info",
+                                                             "current_pickup_index"],
                                                  output_keys=[""]),
                                 transitions={"succeeded" : "PLACE",
                                              "aborted" : "",

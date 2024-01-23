@@ -3,14 +3,12 @@
 import rospy
 import smach
 
-import hsrb_interface
+import LocateObject, ClassifyObject, Optimise, PickUp, Place
 
-import Localise, LocateObject, ClassifyObject, Optimise,    \
-       PickUp, Place
-
-from smach_ros import (IntrospectionServer, SimpleActionState)
+from smach_ros import (IntrospectionServer, SimpleActionState, ServiceState)
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import Point, Quaternion
+from std_srvs.srv import Empty
 
 if __name__ == "__main__":
     rospy.init_node("hsrb_cleanup_task_manager")
@@ -30,7 +28,25 @@ if __name__ == "__main__":
     with sm:
         # navigation callback for searching for objects
         def nav_search_cb(ud, goal):
-            pass
+            nav_goal = MoveBaseGoal()
+            nav_goal = rospy.get_param("/way_points/frame", default="map")
+
+            rospy.loginfo(f"Navigating to search location {ud.nav_goal_index}")
+            if ud.nav_goal_index == 1:
+                waypoint = rospy.get_param("/way_points/search_one")
+                ud.nav_goal_index = 2
+            elif ud.nav_goal_index == 2:
+                waypoint = rospy.get_param("/way_points/search_one")
+                ud.nav_goal_index = 1 
+
+            nav_goal.target_pose.pose.position = Point(x=waypoint["x"], 
+                                                       y=waypoint["y"], 
+                                                       z=waypoint["z"])
+            nav_goal.target_pose.pose.orientation = Quaternion(x=0.0, 
+                                                               y=0.0, 
+                                                               z=0.0, 
+                                                               w=waypoint["w"])
+            return nav_goal
 
         # navigiation callback for picking up objects
         def nav_pickup_cb(ud, goal):
@@ -41,9 +57,12 @@ if __name__ == "__main__":
             pass
         
         # add state to localise hsrb
-        smach.StateMachine.add("LOCALISE", Localise(), 
-                               transitions={"succeeded" : "LOCATE_OBJECT_ONE",
-                                            "failed" : ""})
+        smach.StateMachine.add("LOCALISE",
+                               ServiceState("localization",
+                                            Empty),
+                                transitions={"succeeded" : "NAVIGATE_TO_LOCATION_ONE",
+                                             "aborted" : "",
+                                             "preempted" : ""})
 
         # navigate to location one
         smach.StateMachine.add("NAVIGATE_TO_LOCATION_ONE", 
@@ -78,6 +97,7 @@ if __name__ == "__main__":
                                             "failed" : "NAVIGATE_TO_LOCATION_ONE"})
 
         # classify object
+        # TODO: maybe get rid of this state and do everything in LocateObject to simplify logic
         smach.StateMachine.add("CLASSIFY_OBJECT", ClassifyObject(),
                                transitions={"succeeded" : "OPTIMISE",
                                             "succeeded_one" : "LOCATE_OBJECT_AT_ONE",

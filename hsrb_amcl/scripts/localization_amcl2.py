@@ -44,8 +44,8 @@ class localization():
 
         while loc_acc>0.005 and not rospy.is_shutdown():
             rotate_pub.publish(rotate)
-            #print(loc_acc)
-            #print('loop')
+            print(loc_acc)
+            # print('loop')
         
 
         print('out of loop,wait....')

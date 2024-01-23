@@ -1,0 +1,15 @@
+way_points: {
+    frame: "map",
+    search_one: {
+        x: -0.5,
+        y: 0.0,
+        z: 0.0,
+        w: 1.0
+    },
+    search_two: {
+        x: 1.63,
+        y: -0.6,
+        z: 0.0,
+        w: 1.0
+    }
+}

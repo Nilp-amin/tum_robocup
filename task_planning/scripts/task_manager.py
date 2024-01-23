@@ -88,25 +88,20 @@ if __name__ == "__main__":
 
         # locate object at location one 
         smach.StateMachine.add("LOCATE_OBJECT_AT_ONE", LocateObject(),
-                               transitions={"succeeded" : "CLASSIFY_OBJECT",
-                                            "failed" : "NAVIGATE_TO_LOCATION_TWO"})
+                               transitions={"succeeded" : "OPTIMISE",
+                                            "failed" : "NAVIGATE_TO_LOCATION_TWO"},
+                                remapping={"pickup_info" : "pickup_info", 
+                                           "objects_found_count_in" : "objects_found_count",
+                                           "objects_found_count_out" : "objects_found_count"})
 
         # locate object at location two
         smach.StateMachine.add("LOCATE_OBJECT_AT_TWO", LocateObject(),
-                               transitions={"succeeded" : "CLASSIFY_OBJECT",
-                                            "failed" : "NAVIGATE_TO_LOCATION_ONE"})
-
-        # classify object
-        # TODO: maybe get rid of this state and do everything in LocateObject to simplify logic
-        smach.StateMachine.add("CLASSIFY_OBJECT", ClassifyObject(),
                                transitions={"succeeded" : "OPTIMISE",
-                                            "succeeded_one" : "LOCATE_OBJECT_AT_ONE",
-                                            "succeeded_two" : "LOCATE_OBJECT_AT_TWO",
-                                            "failed_one" : "LOCATE_OBJECT_AT_ONE",
-                                            "failed_two" : "LOCATE_OBJECT_AT_TWO"},
-                                remapping={"objects_found_count_in" : "objects_found_count",
-                                          "objects_found_count_out" : "objects_found_count"})
-        
+                                            "failed" : "NAVIGATE_TO_LOCATION_ONE"},
+                                remapping={"pickup_info": "pickup_info", 
+                                           "objects_found_count_in" : "objects_found_count",
+                                           "objects_found_count_out" : "objects_found_count"})
+
         # optimise the order in which to pickup and dropoff objects
         # TODO: creates a list in pickup order and contains all information
         # about locations to try in case failure of pickup, and drop off

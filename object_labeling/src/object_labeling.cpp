@@ -42,13 +42,9 @@ bool ObjectLabeling::initalize(ros::NodeHandle& nh)
   //#>>>>TODO: setup a mapping from class names the ones given by yolo (see yolo bounding_boxes message for classes)
   //#>>>>TODO: to lables / ids (number from 1 to n) used by the pointcloud
   //#>>>>Note: We will use 0 as 'unkown' type 
-  dict_["bottle"] = 1;
-  dict_["vase"] = 2;
-  dict_["toothbrush"] = 3;
-  dict_["cup"] = 4;
-  dict_["banana"] = 5;
-  dict_["apple"] = 6;
-  dict_["traffic light"] = 7;
+  dict_["Bottle"] = 0;
+  dict_["Cup"] = 1;
+  dict_["Pringles"] = 2;
   // ... bananna, cup, apple, ...
 
   return true;
@@ -178,7 +174,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   //#>>>>TODO: If a cluster cant be matched (no bounding boxes left) assign 0 as label
 
   ROS_INFO("Finding best match between centroids and detections.");
-  std::vector<int> assigned_labels(cluster_indices.size(), 0);                  // lables of each centroid
+  std::vector<int> assigned_labels(cluster_indices.size(), -1);                  // lables of each centroid
   std::vector<std::string> assigned_classes(cluster_indices.size(), "unknown"); // class names of each centroid
 
   for(size_t i = 0; i < detections_.size(); ++i)

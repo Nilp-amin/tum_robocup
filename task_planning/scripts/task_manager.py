@@ -3,7 +3,7 @@
 import rospy
 import smach
 
-import LocateObject, ClassifyObject, Optimise, PickUp, Place
+import LocateObject, Optimise, PickUp, Place
 
 from smach_ros import (IntrospectionServer, SimpleActionState, ServiceState)
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -90,22 +90,15 @@ if __name__ == "__main__":
         smach.StateMachine.add("LOCATE_OBJECT_AT_ONE", LocateObject(),
                                transitions={"succeeded" : "OPTIMISE",
                                             "failed" : "NAVIGATE_TO_LOCATION_TWO"},
-                                remapping={"pickup_info" : "pickup_info", 
-                                           "objects_found_count_in" : "objects_found_count",
-                                           "objects_found_count_out" : "objects_found_count"})
+                                remapping={"pickup_info" : "pickup_info"})
 
         # locate object at location two
         smach.StateMachine.add("LOCATE_OBJECT_AT_TWO", LocateObject(),
                                transitions={"succeeded" : "OPTIMISE",
                                             "failed" : "NAVIGATE_TO_LOCATION_ONE"},
-                                remapping={"pickup_info": "pickup_info", 
-                                           "objects_found_count_in" : "objects_found_count",
-                                           "objects_found_count_out" : "objects_found_count"})
+                                remapping={"pickup_info": "pickup_info"})
 
         # optimise the order in which to pickup and dropoff objects
-        # TODO: creates a list in pickup order and contains all information
-        # about locations to try in case failure of pickup, and drop off
-        # locations
         smach.StateMachine.add("OPTIMISE", Optimise(),
                                transitions={"succeeded" : "NAVIGATE_TO_PICKUP"},
                                remapping={"pickup_info" : "pickup_info"})

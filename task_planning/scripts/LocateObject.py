@@ -4,8 +4,8 @@ import math
 import rospy
 import smach
 import hsrb_interface
-import ObjectInfo
 
+from ObjectInfo import ObjectInfo
 from visualization_msgs.msg import MarkerArray
 
 """This state causes the robot to move to predefined locations on
@@ -40,13 +40,19 @@ class LocateObject(smach.State):
             head_tilt_joint=math.radians(tilt_deg)
         )
 
-    def _is_unqiue_object(self, ud, new_object_info: ObjectInfo) -> bool:
+    def _is_valid_object(self, ud, new_object_info: ObjectInfo) -> bool:
         """Checks if the passed marker belongs to an object
-        which has been already identified.
+        which has been already identified. Also checks the 
+        class of the object is a valid class.
         """
+        # check if object is unique
         for object_info in ud.pickup_info:
             if new_object_info == object_info:
                 return False 
+
+        # check if the object is a valid class
+        if object_info.get_class() != "unknown":
+            return False
 
         return True
 
@@ -89,19 +95,24 @@ class LocateObject(smach.State):
                     # filter exactly the same objects as specified by their
                     # centroid locations 
                     for marker in marker_array_msg.markers:
-                        if len(ud.pickup_info) < LocateObject.REQUIRED_OBJECT_COUNT:
-                            object_info = ObjectInfo(marker) 
-                            if self._is_unqiue_object(ud, object_info):
-                                ud.pickup_info.append(object_info)
+                        if len(ud.pickup_info) < LocateObject.REQUIRED_OBJECT_COUNT: 
+                            if marker.text != "unknown": # TODO: do more checks here, make sure object is on the ground
+                                object_info = ObjectInfo(marker) 
+                                if self._is_valid_object(ud, object_info):
+                                    ud.pickup_info.append(object_info)
+                                    rospy.loginfo(f"Recording {object_info.get_class()} to be picked up.")
+                                    rospy.loginfo(f"{len(ud.pickup_info)} objects have been recorded to be picked up.")
                         else:
                             break
 
                 if self._sector_count == 3 and len(ud.pickup_info) < LocateObject.REQUIRED_OBJECT_COUNT:
                     # checked all sectors and < min num of unqiue objects found
                     status = "failed"
+                    rospy.loginfo("Unable to find new objects at current location.")
                     break
                 elif len(ud.pickup_info) == LocateObject.REQUIRED_OBJECT_COUNT:
                     status = "succeeded"
+                    rospy.loginfo("Found required number of objects.")
                     break
             
                 self.look_new_sector(robot)

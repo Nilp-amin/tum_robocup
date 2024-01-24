@@ -199,8 +199,9 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
     }
 
     // remember the label of match
-    if(match != -1 && dict_.find(bounding_box.Class) != dict_.end())
+    if(match != -1 && dict_.find(bounding_box.Class) != dict_.end() && closest_distance < 50)
     {
+      // std::cout << closest_distance << std::endl;
       assigned_labels[match] = dict_[bounding_box.Class]; // set match to defined class index
       assigned_classes[match] = bounding_box.Class;       // set match to class name
     }

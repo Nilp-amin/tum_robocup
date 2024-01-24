@@ -69,7 +69,7 @@ class LocateObject(smach.State):
                                              timeout=wait)
             rospy.loginfo(f"Found {len(markers_msg.markers)} objects in vision.")
         except rospy.ROSException as e:
-            rospy.logwarn(f"Timeout reached. No message received within {wait} seconds. 
+            rospy.logwarn(f"Timeout reached. No message received within {wait} seconds. \
                 Error: {e}")
 
         return markers_msg

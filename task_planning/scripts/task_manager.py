@@ -3,7 +3,11 @@
 import rospy
 import smach
 
-import LocateObject, Optimise, PickUp, Place
+# import LocateObject, Optimise, PickUp, Place
+from LocateObject import LocateObject
+from Optimise import Optimise
+from PickUp import PickUp
+from Place import Place
 
 from smach_ros import (IntrospectionServer, SimpleActionState, ServiceState)
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
@@ -23,13 +27,14 @@ if __name__ == "__main__":
     sm.userdata.object_class = None
     sm.userdata.current_pickup_index = 0
     sm.userdata.current_pickup_retry_count = 0
+    sm.userdata.pickup_info = []
 
     # open the container
     with sm:
         # navigation callback for searching for objects
         def nav_search_cb(ud, goal):
             nav_goal = MoveBaseGoal()
-            nav_goal = rospy.get_param("/way_points/frame", default="map")
+            nav_goal.target_pose.header.frame_id = rospy.get_param("/way_points/frame", default="map")
 
             rospy.loginfo(f"Navigating to search location {ud.nav_goal_index}")
             if ud.nav_goal_index == 1:
@@ -66,7 +71,7 @@ if __name__ == "__main__":
 
         # navigate to location one
         smach.StateMachine.add("NAVIGATE_TO_LOCATION_ONE", 
-                               SimpleActionState("move_base",
+                               SimpleActionState("move_base/move",
                                                  MoveBaseAction,
                                                  goal_cb=nav_search_cb,
                                                  input_keys=["nav_goal_index"],
@@ -77,7 +82,7 @@ if __name__ == "__main__":
 
         # navigate to location one
         smach.StateMachine.add("NAVIGATE_TO_LOCATION_TWO", 
-                               SimpleActionState("move_base",
+                               SimpleActionState("move_base/move",
                                                  MoveBaseAction,
                                                  goal_cb=nav_search_cb,
                                                  input_keys=["nav_goal_index"],
@@ -105,7 +110,7 @@ if __name__ == "__main__":
 
         # navigate to the object to be picked up
         smach.StateMachine.add("NAVIGATE_TO_PICKUP",
-                               SimpleActionState("move_base",
+                               SimpleActionState("move_base/move",
                                                  MoveBaseAction,
                                                  goal_cb=nav_pickup_cb,
                                                  input_keys=["pickup_info",
@@ -125,7 +130,7 @@ if __name__ == "__main__":
 
         # navigate to the object drop off location
         smach.StateMachine.add("NAVIGATE_TO_DROPOFF",
-                               SimpleActionState("move_base",
+                               SimpleActionState("move_base/move",
                                                  MoveBaseAction,
                                                  goal_cb=nav_dropoff_cb,
                                                  input_keys=["pickup_info",
@@ -139,7 +144,7 @@ if __name__ == "__main__":
         smach.StateMachine.add("PLACE", Place(),
                                transitions={"succeeded" : "NAVIGATE_TO_PICKUP",
                                             "finished" : "NAVIGATE_TO_HOME",
-                                            "failed" : ""},
+                                            "failed" : "aborted"},
                                 remapping={"pickup_index_in" : "current_pickup_index",
                                            "pickup_index_out" : "current_pickup_index"})
 
@@ -149,7 +154,7 @@ if __name__ == "__main__":
         home_goal.target_pose.pose.position = Point(x=0.0, y=0.0, z=0.0)
         home_goal.target_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0)
         smach.StateMachine.add("NAVIGATE_TO_HOME",
-                               SimpleActionState("move_base",
+                               SimpleActionState("move_base/move",
                                                  MoveBaseAction,
                                                  goal=home_goal),
                                 transitions={"succeeded" : "succeeded"})

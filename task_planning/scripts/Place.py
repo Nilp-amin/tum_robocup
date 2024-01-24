@@ -7,7 +7,7 @@ import smach
 """
 class Place(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"])
+        smach.State.__init__(self, outcomes=["succeeded", "finished", "failed"])
 
     def execute(self, ud):
         return super().execute(ud)

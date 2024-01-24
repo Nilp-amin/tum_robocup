@@ -8,7 +8,7 @@ picked up and dropped off to maximise efficiency.
 """
 class Optimise(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"])
+        smach.State.__init__(self, outcomes=["succeeded"])
 
     def execute(self, ud):
         return super().execute(ud)

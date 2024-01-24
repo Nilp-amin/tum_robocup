@@ -94,7 +94,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
   pcl::EuclideanClusterExtraction<PointT> ec;
   ec.setClusterTolerance(0.02); // 0.02m
   ec.setMinClusterSize(100);
-  ec.setMaxClusterSize(25000);
+  ec.setMaxClusterSize(2500);
   ec.setSearchMethod(tree);
   ec.setInputCloud(input);
   ec.extract(cluster_indices);

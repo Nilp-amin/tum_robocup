@@ -110,9 +110,6 @@ bool PlaneSegmentation::preProcessCloud(CloudPtr& input, CloudPtr& output)
   sor.setLeafSize(0.01f, 0.01f, 0.01f);
   sor.filter(*ds_cloud);
 
-  // std::cout << "PointCloud after filtering: " << ds_cloud->width * ds_cloud->height 
-  //     << " data points (" << pcl::getFieldsList (*ds_cloud) << ")." << std::endl;
-  
   //#>>>>Note: Its allways a good idea to get rid of useless points first (e.g. floor, ceiling, walls, etc.)
   //#>>>>TODO: Transform the point cloud to the base_frame of the robot. (A frame with z=0 at ground level)
   //#>>>>TODO: Transform the point cloud to the base_frame and store the result in transf_cloud
@@ -134,9 +131,6 @@ bool PlaneSegmentation::preProcessCloud(CloudPtr& input, CloudPtr& output)
   pass.setFilterFieldName("z");
   pass.setFilterLimits(pre_pass_low_, pre_pass_high_);
   pass.filter(*output);
-
-  // std::cout << "PointCloud after pass: " << output->width * output->height 
-  //     << " data points (" << pcl::getFieldsList (*output) << ")." << std::endl;
 
   return true;
 }

@@ -1,4 +1,3 @@
-# pre_pass_filter: [0.4, 1.0]
-pre_pass_filter: [0.0, 0.2]
-ransac_threshold: 0.01
+pre_pass_filter: [-0.1, 0.2]
+ransac_threshold: 0.02
 seg_pass_filter: [0.01, 0.3]

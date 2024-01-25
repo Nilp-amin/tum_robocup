@@ -11,4 +11,4 @@ class Optimise(smach.State):
         smach.State.__init__(self, outcomes=["succeeded"])
 
     def execute(self, ud):
-        return super().execute(ud)
+        return "succeeded"

@@ -96,12 +96,14 @@ class LocateObject(smach.State):
                     # centroid locations 
                     for marker in marker_array_msg.markers:
                         if len(ud.pickup_info) < LocateObject.REQUIRED_OBJECT_COUNT: 
-                            if marker.text != "unknown": # TODO: do more checks here, make sure object is on the ground
+                            try:
                                 object_info = ObjectInfo(marker) 
                                 if self._is_valid_object(ud, object_info):
                                     ud.pickup_info.append(object_info)
                                     rospy.loginfo(f"Recording {object_info.get_class()} to be picked up.")
                                     rospy.loginfo(f"{len(ud.pickup_info)} objects have been recorded to be picked up.")
+                            except rospy.ROSException as e:
+                                rospy.logwarn(f"Timeout reached. No transform received. Error: {e}")
                         else:
                             break
 

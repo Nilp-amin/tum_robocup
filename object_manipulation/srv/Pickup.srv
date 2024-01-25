@@ -1,0 +1,19 @@
+# The point cloud of the environment
+sensor_msgs/PointCloud2 environment_cloud
+
+# The labeled point cloud representing objects which can be grasped
+sensor_msgs/PointCloud2 object_cloud
+
+# The target object class
+string object_class
+
+# The target object id in the object_cloud
+int64 object_id
+
+# The centroid position in the map frame of the object to be picked up
+geometry_msgs/PointStamped object_centroid
+
+---
+
+# If the object was grasped successfully
+bool succeeded 

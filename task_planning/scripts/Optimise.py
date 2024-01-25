@@ -11,4 +11,5 @@ class Optimise(smach.State):
         smach.State.__init__(self, outcomes=["succeeded"])
 
     def execute(self, ud):
+        ud.target_object.add_pickup_location(ud.target_object.get_position())
         return "succeeded"

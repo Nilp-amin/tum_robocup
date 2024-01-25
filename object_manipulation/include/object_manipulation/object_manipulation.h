@@ -14,6 +14,8 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <actionlib/client/simple_action_client.h>
+#include <object_manipulation/Dropoff.h>
+#include <object_manipulation/Pickup.h>
 
 #include <gpd_ros/CloudSamples.h>
 #include <gpd_ros/GraspConfigList.h>
@@ -59,34 +61,25 @@ private:
                                              const std::vector<std::string>& links_to_allow_contact={});
 
     std::vector<moveit_msgs::Grasp> createGrasps(const gpd_ros::GraspConfigListConstPtr& grasps_msg);
-    
-    void cloudCallback(const sensor_msgs::PointCloud2ConstPtr& labeled_msg,
-                       const sensor_msgs::PointCloud2ConstPtr& camera_msg);
 
-    void graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg);
+    bool pickupCallback(object_manipulation::Pickup::Request&  req,
+                        object_manipulation::Pickup::Response& res);
+
+    bool dropoffCallback(object_manipulation::Dropoff::Request&  req,
+                         object_manipulation::Dropoff::Response& res);
 
 private:
     ros::NodeHandle nh_;
 
-    std::string labeled_objects_cloud_topic_;                                   // labeled point cloud topic name
-    std::string camera_point_cloud_topic_;                                      // camera point cloud topic name
-    std::string target_label_topic_;                                            // target label topic
-
     tf::TransformListener tf_listener_;                                         // access to tf tree for ros transformations
 
     moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface for whole body
-    moveit::planning_interface::MoveGroupInterface move_body_;                  // moveit move interface for body 
-    moveit::planning_interface::MoveGroupInterface move_head_;                  // moveit move interface for head
-    moveit::planning_interface::MoveGroupInterface move_arm_;                   // moveit move interface for arm
-    moveit::planning_interface::MoveGroupInterface move_gripper_;               // moveit move interface for gripper 
     moveit::planning_interface::PlanningSceneInterface planning_interface_;     // moveit planning scene interface
 
-    ros::ServiceClient octomap_client_;
+    ros::ServiceServer pickup_service_;
+    ros::ServiceServer dropoff_service_; 
 
-    // synchronised subscribers required for gpd
-    message_filters::Subscriber<sensor_msgs::PointCloud2> labeled_object_cloud_sub_;
-    message_filters::Subscriber<sensor_msgs::PointCloud2> camera_point_cloud_sub_;
-    boost::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_sub_;
+    ros::ServiceClient octomap_client_;
 
     ros::Subscriber gpd_ros_grasps_sub_;                                        // subscriber to gpd_ros of optimal grasps
 

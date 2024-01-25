@@ -5,14 +5,7 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
                                        const std::string& camera_point_cloud_topic,
                                        const std::string& target_label_topic)
 : nh_{nh},
-  labeled_objects_cloud_topic_{labeled_objects_topic},
-  camera_point_cloud_topic_{camera_point_cloud_topic},
-  target_label_topic_{target_label_topic},
-  move_group_{"whole_body_light"},
-  move_body_{"base"},
-  move_head_{"head"},
-  move_arm_{"arm"},
-  move_gripper_{"gripper"} {}
+  move_group_{"whole_body_light"} {}
 
 bool ObjectManipulation::initalise()
 {
@@ -39,14 +32,10 @@ bool ObjectManipulation::initalise()
 
     ROS_INFO("Initalising rostopics.");
 
-    labeled_object_cloud_sub_.subscribe(nh_, labeled_objects_cloud_topic_, 1);
-    camera_point_cloud_sub_.subscribe(nh_, camera_point_cloud_topic_, 1);
-    sync_sub_.reset(new message_filters::Synchronizer<SyncPolicy>(SyncPolicy(1), labeled_object_cloud_sub_, camera_point_cloud_sub_));
-    sync_sub_->registerCallback(boost::bind(&ObjectManipulation::cloudCallback, this, _1, _2));
-
-    gpd_ros_grasps_sub_ = nh_.subscribe("/detect_grasps/clustered_grasps", 1, &ObjectManipulation::graspsCallback, this);
-
     gpd_ros_cloud_pub_ = nh_.advertise<gpd_ros::CloudSamples>("/cloud_stitched", 1);
+
+    dropoff_service_ = nh_.advertiseService("dropoff", &ObjectManipulation::dropoffCallback, this);
+    pickup_service_ = nh_.advertiseService("pickup", &ObjectManipulation::pickupCallback, this);
 
     octomap_client_ = nh_.serviceClient<std_srvs::Empty>("/clear_octomap");
 
@@ -110,11 +99,11 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
     {
         for (size_t i{0}; i < labels->markers.size(); ++i)
         {
-            if (labels->markers[i].text == label)
+            if (labels->markers[i].text == label) // TODO: check the centroid value is exactly the same
             {
                 target_object_found = true;
                 target_object_pose = labels->markers[i].pose;
-                target_object_pose.position.x += 0.025;
+                target_object_pose.position.x += 0.025; //// TODO: need to tune this value to avoid collisitions
                 target_object_pose.position.z -= 0.1;
                 target_object_pose.orientation.x = 0.0;
                 target_object_pose.orientation.y = 0.0;
@@ -133,6 +122,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
     }
 
     // find the verticies of the plane to avoid collision with
+    //// TODO: can probably just hard code verticies to make it more robust
     sensor_msgs::PointCloud2ConstPtr plane_verticies = 
         ros::topic::waitForMessage<sensor_msgs::PointCloud2>(
             "/table_vertices", nh_, ros::Duration{2.0}
@@ -343,25 +333,26 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
     return grasps;
 }
 
-void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& labeled_cloud_msg,
-                                       const sensor_msgs::PointCloud2ConstPtr& camera_cloud_msg)
+bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  req,
+                                        object_manipulation::Pickup::Response& res)
 {
-    ROS_INFO("Point clouds recieved.");
+    ROS_INFO("Pickup service called.");
+    res.succeeded = false;
 
     // obtain the camera position at the provided cloud_msg timestamp
     tf::StampedTransform T_base_camera;
     tf_listener_.lookupTransform(
         "base_footprint",
         "head_rgbd_sensor_rgb_frame",
-        ros::Time(0),
+        req.object_cloud.header.stamp,
         T_base_camera
     );
 
     // populate the merged cloud information
     gpd_ros::CloudSources gpd_cloud_msg; 
-    gpd_cloud_msg.cloud = *camera_cloud_msg;
+    gpd_cloud_msg.cloud = req.environment_cloud;
     gpd_cloud_msg.camera_source = std::vector<std_msgs::Int64>{
-        camera_cloud_msg->width * camera_cloud_msg->height,
+        req.environment_cloud.width * req.environment_cloud.height,
         std_msgs::Int64{} 
     };
     geometry_msgs::Point camera_position;
@@ -375,54 +366,60 @@ void ObjectManipulation::cloudCallback(const sensor_msgs::PointCloud2ConstPtr& l
     gpd_cloud_samples_msg.cloud_sources = gpd_cloud_msg;
 
     // create a vector of points for which to search for grasp poses
-    sensor_msgs::PointCloud2ConstIterator<float> iter_x(*labeled_cloud_msg, "x");
-    sensor_msgs::PointCloud2ConstIterator<float> iter_y(*labeled_cloud_msg, "y");
-    sensor_msgs::PointCloud2ConstIterator<float> iter_z(*labeled_cloud_msg, "z");
-    sensor_msgs::PointCloud2ConstIterator<int> iter_label(*labeled_cloud_msg, "label");
+    sensor_msgs::PointCloud2ConstIterator<float> iter_x(req.object_cloud, "x");
+    sensor_msgs::PointCloud2ConstIterator<float> iter_y(req.object_cloud, "y");
+    sensor_msgs::PointCloud2ConstIterator<float> iter_z(req.object_cloud, "z");
+    sensor_msgs::PointCloud2ConstIterator<int> iter_label(req.object_cloud, "label");
 
-    ROS_INFO("Obtaining id of pickup target.");
-    std_msgs::Int64ConstPtr target_label = 
-        ros::topic::waitForMessage<std_msgs::Int64>(target_label_topic_, nh_, ros::Duration(5.0));
-    if (target_label != nullptr)
+    for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_label)
     {
-        ROS_INFO_STREAM("Obtained pickup target id: " << target_label->data);
-        for (; iter_x != iter_x.end(); ++iter_x, ++iter_y, ++iter_z, ++iter_label)
+        if (*iter_label == req.object_id)
         {
-            if (*iter_label == target_label->data)
-            {
-                geometry_msgs::Point sample_point;
-                sample_point.x = *iter_x;
-                sample_point.y = *iter_y;
-                sample_point.z = *iter_z;
-                gpd_cloud_samples_msg.samples.push_back(sample_point);
-            }
-        }
-
-        // publish to gpd_ros
-        if (gpd_cloud_samples_msg.samples.size() > 0)
-        {
-            ROS_INFO("Publishing point cloud to gpd_ros.");
-            gpd_ros_cloud_pub_.publish(gpd_cloud_samples_msg);
+            geometry_msgs::Point sample_point;
+            sample_point.x = *iter_x;
+            sample_point.y = *iter_y;
+            sample_point.z = *iter_z;
+            gpd_cloud_samples_msg.samples.push_back(sample_point);
         }
     }
+
+    // publish to gpd_ros
+    if (gpd_cloud_samples_msg.samples.size() > 0)
+    {
+        ROS_INFO("Publishing point cloud to gpd_ros.");
+        gpd_ros_cloud_pub_.publish(gpd_cloud_samples_msg);
+    }
+
+    gpd_ros::GraspConfigListConstPtr grasp_config_list_msg =
+        ros::topic::waitForMessage<gpd_ros::GraspConfigList>("/detect_grasps/clustered_grasps",
+                                                             nh_,
+                                                             ros::Duration(10.0));
+    if (grasp_config_list_msg != nullptr)
+    {
+        ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
+        move_group_.setStartStateToCurrentState();
+        createPlanningScene(req.object_class);
+        std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(grasp_config_list_msg);
+        moveit_msgs::PickupGoal goal = createPickupGoal(
+            "whole_body_light",
+            "target",
+            geometry_msgs::PoseStamped{},
+            possible_grasps,
+            links_to_allow_contact_
+        );
+        ROS_INFO("Sending goal.");
+        auto result = move_group_.pick(goal);
+        ROS_INFO("Waiting for result.");
+        ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");
+
+        res.succeeded = (result == moveit::core::MoveItErrorCode::SUCCESS);
+    }
+
+    return true;
 }
 
-void ObjectManipulation::graspsCallback(const gpd_ros::GraspConfigListConstPtr& msg)
+bool ObjectManipulation::dropoffCallback(object_manipulation::Dropoff::Request&  req,
+                                         object_manipulation::Dropoff::Response& res)
 {
-    ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
-    move_group_.setStartStateToCurrentState();
-    // createPlanningScene("cup");
-    createPlanningScene("bottle");
-    std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(msg);
-    moveit_msgs::PickupGoal goal = createPickupGoal(
-        "whole_body_light",
-        "target",
-        geometry_msgs::PoseStamped{},
-        possible_grasps,
-        links_to_allow_contact_
-    );
-    ROS_INFO("Sending goal.");
-    auto result = move_group_.pick(goal);
-    ROS_INFO("Waiting for result.");
-    ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");
+    return true;
 }

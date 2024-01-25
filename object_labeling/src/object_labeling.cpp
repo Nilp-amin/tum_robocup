@@ -243,7 +243,7 @@ bool ObjectLabeling::labelObjects(CloudPtr& input, CloudPtrl& output)
     marker.pose.position.z = centroids[i].z() + 0.1;
     marker.color.a = 1.0;
     marker.scale.z = 0.1;
-    marker.id = i;
+    marker.id = assigned_labels[i];
     marker.header.frame_id = input->header.frame_id;
     marker.header.stamp = ros::Time::now();
     text_markers_.markers[i] = marker;

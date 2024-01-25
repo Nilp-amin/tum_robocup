@@ -41,7 +41,7 @@ if __name__ == "__main__":
                 waypoint = rospy.get_param("/way_points/search_one")
                 ud.nav_goal_index = 2
             elif ud.nav_goal_index == 2:
-                waypoint = rospy.get_param("/way_points/search_one")
+                waypoint = rospy.get_param("/way_points/search_two")
                 ud.nav_goal_index = 1 
 
             nav_goal.target_pose.pose.position = Point(x=waypoint["x"], 
@@ -55,7 +55,13 @@ if __name__ == "__main__":
 
         # navigiation callback for picking up objects
         def nav_pickup_cb(ud, goal):
-            pass
+            target_object = ud.pickup_info[ud.current_pickup_index]
+            nav_goal = MoveBaseGoal()
+            nav_goal.target_pose = target_object.get_pickup_location(
+                ud.current_pickup_retry_count
+            ) 
+
+            return nav_goal
 
         # navigiation callback for dropping off objects
         def nav_dropoff_cb(ud, goal):
@@ -125,8 +131,9 @@ if __name__ == "__main__":
         smach.StateMachine.add("PICKUP", PickUp(),
                                transitions={"succeeded" : "NAVIGATE_TO_DROPOFF",
                                             "failed" : "NAVIGATE_TO_PICKUP"},
-                                remapping={"retry_count_in" : "current_pickup_retry_count",
-                                           "retry_count_out" : "current_pickup_retry_count"})
+                                remapping={"pickup_info": "pickup_info",
+                                           "current_pickup_index" : "current_pickup_index",
+                                           "current_pickup_retry_count" : "current_pickup_retry_count"})
 
         # navigate to the object drop off location
         smach.StateMachine.add("NAVIGATE_TO_DROPOFF",

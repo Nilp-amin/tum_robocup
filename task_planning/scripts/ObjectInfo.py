@@ -54,6 +54,12 @@ class ObjectInfo(object):
         """Gets the class of the object.
         """
         return self._marker.text
+    
+    def get_class_id(self) -> int:
+        """Gets the class id of the object as seen in the
+        point cloud.
+        """
+        return self._marker.id
 
     def get_dropoff_point(self) -> PointStamped:
         """Gets the location of the dropoff point

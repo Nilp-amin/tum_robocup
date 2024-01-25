@@ -55,18 +55,17 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  GoalObjectInfo.msg
-)
-
-## Generate services in the 'srv' folder
-# add_service_files(
+# ## Generate messages in the 'msg' folder
+# add_message_files(
 #   FILES
-#   Service1.srv
-#   Service2.srv
 # )
+
+# Generate services in the 'srv' folder
+add_service_files(
+  FILES
+  Dropoff.srv
+  Pickup.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -125,7 +124,6 @@ catkin_package(
   moveit_ros_planning_interface
   moveit_visual_tools
   visualization_msgs
-  message_runtime
 #  DEPENDS system_lib
 )
 

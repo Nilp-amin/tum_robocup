@@ -27,8 +27,8 @@ class PickUp(smach.State):
         self._camera_point_cloud_sub = Subscriber("/combined_point_cloud", PointCloud2)
 
         # synchronise the subscribers
-        self._sync_sub = ApproximateTimeSynchronizer([], queue_size=1, slop=0.1)
-        self._sync_sub(self._point_cloud_callback)
+        self._sync_sub = ApproximateTimeSynchronizer([self._labeled_object_cloud_sub, self._camera_point_cloud_sub], queue_size=1, slop=0.1)
+        self._sync_sub.registerCallback(self._point_cloud_callback)
 
         self._labeled_cloud_msg = None
         self._camera_cloud_msg = None

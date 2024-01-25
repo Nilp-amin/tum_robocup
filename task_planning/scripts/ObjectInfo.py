@@ -18,11 +18,12 @@ class ObjectInfo(object):
         if marker.header.frame_id != "map":
             centroid_stamped = PointStamped(header=marker.header, 
                                             point=marker.pose.position) 
+            # FIXME: transform failing - extrapolation into the past????
             tf_listener = tf.TransformListener()
             tf_listener.waitForTransform("map",
-                                         marker.header.frame_id,
+                                         centroid_stamped.header.frame_id,
                                          centroid_stamped.header.stamp,
-                                         rospy.Duration(1.0))
+                                         rospy.Duration(2.0))
             transformed_centroid = tf_listener.transformPoint("map", centroid_stamped)
             marker.pose.position = transformed_centroid.point
             marker.header.frame_id = "map"

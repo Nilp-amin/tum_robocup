@@ -72,7 +72,7 @@ Eigen::Affine3d ObjectManipulation::poseMsgToEigen(const geometry_msgs::Pose& po
     return transformation_matrix;
 }
 
-void ObjectManipulation::createPlanningScene(const std::string& label)
+void ObjectManipulation::createPlanningScene(const geometry_msgs::PointStamped& target_centroid)
 {
     ROS_INFO("Removing any previous collision objects.");
     moveit_msgs::AttachedCollisionObject att_coll_object;
@@ -86,40 +86,13 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
     octomap_client_.call(octomap_srv);
     ros::Duration(2.0).sleep();
 
-    // obtain the currently detected labels
-    visualization_msgs::MarkerArrayConstPtr labels = 
-        ros::topic::waitForMessage<visualization_msgs::MarkerArray>(
-            "/text_markers", nh_, ros::Duration{2.0}
-        );
-    
-    // find the pose of the target object centroid
-    bool target_object_found{false};
-    geometry_msgs::Pose target_object_pose;
-    if (labels != nullptr)
-    {
-        for (size_t i{0}; i < labels->markers.size(); ++i)
-        {
-            if (labels->markers[i].text == label) // TODO: check the centroid value is exactly the same
-            {
-                target_object_found = true;
-                target_object_pose = labels->markers[i].pose;
-                target_object_pose.position.x += 0.025; //// TODO: need to tune this value to avoid collisitions
-                target_object_pose.position.z -= 0.1;
-                target_object_pose.orientation.x = 0.0;
-                target_object_pose.orientation.y = 0.0;
-                target_object_pose.orientation.z = 0.0;
-                target_object_pose.orientation.w = 1.0;
-                break;
-            }
-        }
-        if (!target_object_found)
-        {
-            ROS_ERROR_STREAM("no label: " << label << " found");
-        }
-    } else
-    {
-        ROS_ERROR("no labels detected");
-    }
+    // create pose message for target object
+    geometry_msgs::PoseStamped target_object_pose;
+    target_object_pose.header = target_centroid.header;
+    target_object_pose.pose.position.x = target_centroid.point.x; 
+    target_object_pose.pose.position.y = target_centroid.point.y;
+    target_object_pose.pose.position.z = target_centroid.point.z;
+    target_object_pose.pose.orientation.w = 1.0;
 
     // find the verticies of the plane to avoid collision with
     //// TODO: can probably just hard code verticies to make it more robust
@@ -129,7 +102,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         );
 
 
-    if (target_object_found && plane_verticies != nullptr)
+    if (plane_verticies != nullptr)
     {
         sensor_msgs::PointCloud2ConstIterator<float> iter_x(*plane_verticies, "x");
         sensor_msgs::PointCloud2ConstIterator<float> iter_y(*plane_verticies, "y");
@@ -172,7 +145,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
 
         // create a target collision object
         moveit_msgs::CollisionObject target_collision_object;
-        target_collision_object.header.frame_id = plane_verticies->header.frame_id;
+        target_collision_object.header.frame_id = target_object_pose.header.frame_id;
         target_collision_object.id = "target";
 
         // define the shape of the target box object
@@ -184,7 +157,7 @@ void ObjectManipulation::createPlanningScene(const std::string& label)
         target_primitive.dimensions[target_primitive.BOX_Z] = 0.02;
 
         target_collision_object.primitives.push_back(target_primitive);
-        target_collision_object.primitive_poses.push_back(target_object_pose);
+        target_collision_object.primitive_poses.push_back(target_object_pose.pose);
 
         // add objects to the planning scene
         planning_interface_.applyCollisionObject(plane_collision_object);
@@ -398,7 +371,7 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
     {
         ROS_INFO("Obtained possible grasp pose candidates from gpd_ros.");
         move_group_.setStartStateToCurrentState();
-        createPlanningScene(req.object_class);
+        createPlanningScene(req.object_centroid);
         std::vector<moveit_msgs::Grasp> possible_grasps = createGrasps(grasp_config_list_msg);
         moveit_msgs::PickupGoal goal = createPickupGoal(
             "whole_body_light",

@@ -51,7 +51,7 @@ class LocateObject(smach.State):
                 return False 
 
         # check if the object is a valid class
-        if object_info.get_class() != "unknown":
+        if new_object_info.get_class() != "unknown":
             return False
 
         return True

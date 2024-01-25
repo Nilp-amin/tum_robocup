@@ -52,7 +52,7 @@ private:
 
     Eigen::Affine3d poseMsgToEigen(const geometry_msgs::Pose& pose_msg);
 
-    void createPlanningScene(const std::string& label);
+    void createPlanningScene(const geometry_msgs::PointStamped& target_centroid);
 
     moveit_msgs::PickupGoal createPickupGoal(const std::string& group="arm_torso",
                                              const std::string& target="part",

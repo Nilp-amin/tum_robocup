@@ -12,13 +12,12 @@ from geometry_msgs.msg import Point, PointStamped, PoseStamped, Quaternion
 class ObjectInfo(object):
     UNIQUE_MIN_DIST = 2e-2
     Z_CENTROID_OFFSET = 0.1
-    def __init__(self, marker: Marker, transform_listner: tf.TransformListener):
+    def __init__(self, marker: Marker, tf_listener: tf.TransformListener):
         marker.pose.position.z -= ObjectInfo.Z_CENTROID_OFFSET 
         # convert the marker coordinates to the map frame
         if marker.header.frame_id != "map":
             centroid_stamped = PointStamped(header=marker.header, 
                                             point=marker.pose.position) 
-            tf_listener = tf.TransformListener()
             tf_listener.waitForTransform("map",
                                          centroid_stamped.header.frame_id,
                                          centroid_stamped.header.stamp,
@@ -35,14 +34,16 @@ class ObjectInfo(object):
             drop_pose_stamped.header.frame_id = rospy.get_param(f"/way_points/frame",
                                                                 default="map")
             drop_pose_stamped.header.stamp = rospy.Time.now()
-            drop_pose_stamped.pose.point = Point(drop_pose["x"],
-                                                 drop_pose["y"],
-                                                 drop_pose["z"])
+            drop_pose_stamped.pose.position = Point(drop_pose["x"],
+                                                    drop_pose["y"],
+                                                    drop_pose["z"])
             drop_pose_stamped.pose.orientation = Quaternion(x=drop_pose["rx"],
                                                             y=drop_pose["ry"],
                                                             z=drop_pose["rz"],
                                                             w=drop_pose["rw"])
             self._dropoff_point = drop_pose_stamped
+
+        self._class_to_id = {"Bottle" : 0, "Cup" : 1, "Pringles" : 2}
 
         # possible locations in the map frame to go to pickup this object
         self._pickup_locations = []
@@ -63,9 +64,9 @@ class ObjectInfo(object):
         """Gets the class id of the object as seen in the
         point cloud.
         """
-        return self._marker.id
+        return self._class_to_id[self.get_class()]
 
-    def get_dropoff_point(self) -> PoseStamped:
+    def get_dropoff_location(self) -> PoseStamped:
         """Gets the location of the dropoff point
         for this object in the map frame. Dropoff point 
         is based on the class of the object.

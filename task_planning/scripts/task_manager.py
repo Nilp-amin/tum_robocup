@@ -60,12 +60,18 @@ if __name__ == "__main__":
             nav_goal.target_pose = target_object.get_pickup_location(
                 ud.current_pickup_retry_count
             ) 
+            rospy.loginfo(f"Navigating to pose: {nav_goal}")
 
             return nav_goal
 
         # navigiation callback for dropping off objects
         def nav_dropoff_cb(ud, goal):
-            pass
+            target_object = ud.pickup_info[ud.current_pickup_index]
+            nav_goal = MoveBaseGoal()
+            nav_goal.target_pose = target_object.get_dropoff_location() 
+            rospy.loginfo(f"Navigating to pose: {nav_goal}")
+
+            return nav_goal
         
         # add state to localise hsrb
         smach.StateMachine.add("LOCALISE",
@@ -152,8 +158,7 @@ if __name__ == "__main__":
                                transitions={"succeeded" : "NAVIGATE_TO_PICKUP",
                                             "finished" : "NAVIGATE_TO_HOME",
                                             "failed" : "aborted"},
-                                remapping={"pickup_index_in" : "current_pickup_index",
-                                           "pickup_index_out" : "current_pickup_index"})
+                                remapping={"current_pickup_index" : "current_pickup_index"})
 
         # move back to the home position
         home_goal = MoveBaseGoal()

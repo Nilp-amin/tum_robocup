@@ -30,7 +30,7 @@ bool ObjectManipulation::initalise()
     if (!ros::param::get("/object_manipulation_node/allowed_touch_objects", allowed_touch_objects_)) { return false; }
     if (!ros::param::get("/object_manipulation_node/links_to_allow_contact", links_to_allow_contact_)) { return false; }
 
-    ROS_INFO("Initalising rostopics.");
+    ROS_INFO("Initalising rostopics and rosservices.");
 
     gpd_ros_cloud_pub_ = nh_.advertise<gpd_ros::CloudSamples>("/cloud_stitched", 1);
 
@@ -42,6 +42,8 @@ bool ObjectManipulation::initalise()
     // set moveit configurations
     move_group_.setPlannerId("RRTstarkConfigDefault");
     move_group_.setPoseReferenceFrame(grasp_pose_frame_id_);
+
+    ROS_INFO("Initalisation complete.");
 
     return true;
 }
@@ -309,7 +311,7 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
 bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  req,
                                         object_manipulation::Pickup::Response& res)
 {
-    ROS_INFO("Pickup service called.");
+    ROS_INFO_STREAM("Pickup service called for " << req.object_class << " with id " << req.object_id);
     res.succeeded = false;
 
     // obtain the camera position at the provided cloud_msg timestamp

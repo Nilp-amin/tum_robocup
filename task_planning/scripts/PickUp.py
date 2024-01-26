@@ -57,7 +57,7 @@ class PickUp(smach.State):
         identified objects.
         """
         try:
-            pickup = rospy.ServiceProxy("pickup", PickUp)
+            pickup = rospy.ServiceProxy("pickup", Pickup)
             return pickup.call(environment_cloud=env_cloud,
                                object_cloud=obj_cloud,
                                object_class=obj_class,
@@ -88,6 +88,7 @@ class PickUp(smach.State):
         status = "failed"
         with hsrb_interface.Robot() as robot:
             self.look_down(robot)
+            rospy.sleep(2.0)
 
             # wait until the sync subscriber has been called
             while not self._sync_called:

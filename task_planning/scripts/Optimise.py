@@ -8,8 +8,17 @@ picked up and dropped off to maximise efficiency.
 """
 class Optimise(smach.State):
     def __init__(self):
-        smach.State.__init__(self, outcomes=["succeeded"])
+        smach.State.__init__(self, outcomes=["succeeded", "failed"],
+                             input_keys=["pickup_info"],
+                             output_keys=["pickup_info"])
 
     def execute(self, ud):
         ud.target_object.add_pickup_location(ud.target_object.get_position())
+        print(ud.pickup_info)
+        
+        
+        
+        
+        
+        
         return "succeeded"

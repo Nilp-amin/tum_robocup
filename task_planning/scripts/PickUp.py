@@ -27,7 +27,10 @@ class PickUp(smach.State):
         self._camera_point_cloud_sub = Subscriber("/combined_point_cloud", PointCloud2)
 
         # synchronise the subscribers
-        self._sync_sub = ApproximateTimeSynchronizer([self._labeled_object_cloud_sub, self._camera_point_cloud_sub], queue_size=1, slop=0.1)
+        self._sync_sub = ApproximateTimeSynchronizer([self._labeled_object_cloud_sub, 
+                                                      self._camera_point_cloud_sub], 
+                                                      queue_size=1, 
+                                                      slop=0.1)
         self._sync_sub.registerCallback(self._point_cloud_callback)
 
         self._labeled_cloud_msg = None
@@ -76,7 +79,7 @@ class PickUp(smach.State):
         self._rotate_head(robot, pan_deg=0, tilt_deg=-45)
 
     def move_to_go(self, robot):
-        """Moves the robot arm to the neutral position.
+        """Moves the robot arm to the go position.
         """
         whole_body = robot.get("whole_body")
         whole_body.move_to_go()

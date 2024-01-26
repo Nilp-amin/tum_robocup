@@ -4,6 +4,7 @@ import math
 import rospy
 import smach
 import hsrb_interface
+import tf
 
 from ObjectInfo import ObjectInfo
 from visualization_msgs.msg import MarkerArray
@@ -22,6 +23,7 @@ class LocateObject(smach.State):
 
         # the number of sectors checked for objects
         self._sector_count = 0
+        self._tf_listner = tf.TransformListener()
 
     def _rotate_base(self, robot, deg=90) -> None:
         """Rotate the robot by an amount relative to
@@ -97,7 +99,7 @@ class LocateObject(smach.State):
                     for marker in marker_array_msg.markers:
                         if len(ud.pickup_info) < LocateObject.REQUIRED_OBJECT_COUNT: 
                             try:
-                                object_info = ObjectInfo(marker) 
+                                object_info = ObjectInfo(marker, self._tf_listner) 
                                 if self._is_valid_object(ud, object_info):
                                     ud.pickup_info.append(object_info)
                                     rospy.loginfo(f"Recording {object_info.get_class()} to be picked up.")

@@ -5,25 +5,24 @@ import math
 import tf
 
 from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point, PointStamped 
+from geometry_msgs.msg import Point, PointStamped, PoseStamped, Quaternion
 
 """Encapsulates information about detected objects. 
 """
 class ObjectInfo(object):
     UNIQUE_MIN_DIST = 2e-2
     Z_CENTROID_OFFSET = 0.1
-    def __init__(self, marker: Marker):
+    def __init__(self, marker: Marker, transform_listner: tf.TransformListener):
         marker.pose.position.z -= ObjectInfo.Z_CENTROID_OFFSET 
         # convert the marker coordinates to the map frame
         if marker.header.frame_id != "map":
             centroid_stamped = PointStamped(header=marker.header, 
                                             point=marker.pose.position) 
-            # FIXME: transform failing - extrapolation into the past????
             tf_listener = tf.TransformListener()
             tf_listener.waitForTransform("map",
                                          centroid_stamped.header.frame_id,
                                          centroid_stamped.header.stamp,
-                                         rospy.Duration(2.0))
+                                         rospy.Duration(1.0))
             transformed_centroid = tf_listener.transformPoint("map", centroid_stamped)
             marker.pose.position = transformed_centroid.point
             marker.header.frame_id = "map"
@@ -31,15 +30,19 @@ class ObjectInfo(object):
 
         # obtain dropoff point of object based on class
         if marker.text in ["Cup", "Bottle", "Pringles"]:
-            drop_coords = rospy.get_param(f"/way_points/drop_{marker.text}") 
-            drop_coords_stamped = PointStamped()
-            drop_coords_stamped.header.frame_id = rospy.get_param(f"/way_points/frame",
+            drop_pose = rospy.get_param(f"/way_points/drop_{marker.text}") 
+            drop_pose_stamped = PoseStamped()
+            drop_pose_stamped.header.frame_id = rospy.get_param(f"/way_points/frame",
                                                                 default="map")
-            drop_coords_stamped.header.stamp = rospy.Time.now()
-            drop_coords_stamped.point = Point(drop_coords["x"],
-                                            drop_coords["y"],
-                                            drop_coords["z"])
-            self._dropoff_point = drop_coords_stamped
+            drop_pose_stamped.header.stamp = rospy.Time.now()
+            drop_pose_stamped.pose.point = Point(drop_pose["x"],
+                                                 drop_pose["y"],
+                                                 drop_pose["z"])
+            drop_pose_stamped.pose.orientation = Quaternion(x=drop_pose["rx"],
+                                                            y=drop_pose["ry"],
+                                                            z=drop_pose["rz"],
+                                                            w=drop_pose["rw"])
+            self._dropoff_point = drop_pose_stamped
 
         # possible locations in the map frame to go to pickup this object
         self._pickup_locations = []
@@ -62,19 +65,19 @@ class ObjectInfo(object):
         """
         return self._marker.id
 
-    def get_dropoff_point(self) -> PointStamped:
+    def get_dropoff_point(self) -> PoseStamped:
         """Gets the location of the dropoff point
         for this object in the map frame. Dropoff point 
         is based on the class of the object.
         """
         return self._dropoff_point
 
-    def get_pickup_location(self, index:int) -> PointStamped:
+    def get_pickup_location(self, index:int) -> PoseStamped:
         """Gets the pickup location at give index.
         """
         return self._pickup_locations[index % len(self._pickup_locations)]
 
-    def add_pickup_location(self, location:PointStamped) -> None:
+    def add_pickup_location(self, location:PoseStamped) -> None:
         """Adds a new pickup location for this object.
         The pickup location should be in the map frame.
         """

@@ -57,7 +57,7 @@ class PickUp(smach.State):
         identified objects.
         """
         try:
-            pickup = rospy.ServiceProxy("pickup", PickUp)
+            pickup = rospy.ServiceProxy("pickup", Pickup)
             return pickup.call(environment_cloud=env_cloud,
                                object_cloud=obj_cloud,
                                object_class=obj_class,
@@ -87,7 +87,8 @@ class PickUp(smach.State):
     def execute(self, ud):
         status = "failed"
         with hsrb_interface.Robot() as robot:
-            self.look_down(robot)
+            self.look_down(robot) # TODO: could change this to use gaze_point to be more robust
+            rospy.sleep(2.0)
 
             # wait until the sync subscriber has been called
             while not self._sync_called:

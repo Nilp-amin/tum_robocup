@@ -53,7 +53,7 @@ class LocateObject(smach.State):
                 return False 
 
         # check if the object is a valid class
-        if new_object_info.get_class() != "unknown":
+        if new_object_info.get_class() == "unknown":
             return False
 
         return True
@@ -88,6 +88,7 @@ class LocateObject(smach.State):
         status = "aborted"
         with hsrb_interface.Robot() as robot:
             self.look_new_sector(robot, move_base=False)
+            rospy.sleep(2.0)
 
             # keep looping until all sectors checked or min num of unique objects found
             while True:
@@ -97,6 +98,7 @@ class LocateObject(smach.State):
                     # filter exactly the same objects as specified by their
                     # centroid locations 
                     for marker in marker_array_msg.markers:
+                        rospy.loginfo(f"object_class: {marker.text}")
                         if len(ud.pickup_info) < LocateObject.REQUIRED_OBJECT_COUNT: 
                             try:
                                 object_info = ObjectInfo(marker, self._tf_listner) 
@@ -121,5 +123,6 @@ class LocateObject(smach.State):
             
                 self.look_new_sector(robot)
                 self._sector_count += 1
+                rospy.sleep(2.0)
 
         return status

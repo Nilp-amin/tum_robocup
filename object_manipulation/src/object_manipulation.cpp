@@ -5,7 +5,8 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
                                        const std::string& camera_point_cloud_topic,
                                        const std::string& target_label_topic)
 : nh_{nh},
-  move_group_{"whole_body_light"} {}
+  move_group_{"whole_body_light"},
+  gripper_{"gripper"} {}
 
 bool ObjectManipulation::initalise()
 {
@@ -30,7 +31,7 @@ bool ObjectManipulation::initalise()
     if (!ros::param::get("/object_manipulation_node/allowed_touch_objects", allowed_touch_objects_)) { return false; }
     if (!ros::param::get("/object_manipulation_node/links_to_allow_contact", links_to_allow_contact_)) { return false; }
 
-    ROS_INFO("Initalising rostopics.");
+    ROS_INFO("Initalising rostopics and rosservices.");
 
     gpd_ros_cloud_pub_ = nh_.advertise<gpd_ros::CloudSamples>("/cloud_stitched", 1);
 
@@ -42,6 +43,10 @@ bool ObjectManipulation::initalise()
     // set moveit configurations
     move_group_.setPlannerId("RRTstarkConfigDefault");
     move_group_.setPoseReferenceFrame(grasp_pose_frame_id_);
+
+    gripper_.setGoalJointTolerance(0.05);
+
+    ROS_INFO("Initalisation complete.");
 
     return true;
 }
@@ -309,7 +314,7 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
 bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  req,
                                         object_manipulation::Pickup::Response& res)
 {
-    ROS_INFO("Pickup service called.");
+    ROS_INFO_STREAM("Pickup service called for " << req.object_class << " with id " << req.object_id);
     res.succeeded = false;
 
     // obtain the camera position at the provided cloud_msg timestamp
@@ -384,6 +389,12 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
         auto result = move_group_.pick(goal);
         ROS_INFO("Waiting for result.");
         ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");
+        if (result != moveit::core::MoveItErrorCode::SUCCESS)
+        {
+            // open and close gripper to release any failed grasped objects
+            gripper_.setJointValueTarget("hand_motor_joint", 1.2);
+            gripper_.setJointValueTarget("hand_motor_joint", 0.0);
+        }
 
         res.succeeded = (result == moveit::core::MoveItErrorCode::SUCCESS);
     }

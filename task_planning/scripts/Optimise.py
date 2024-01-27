@@ -20,14 +20,23 @@ class Optimise(smach.State):
     # def eucledian_dist(self, A, B):
     #     distance = np.linalg.norm(B-A)
     #     return distance
+    def _generate_pickup_pose(self, target_object:ObjectInfo) -> PoseStamped:
+        pickup_pose = PoseStamped()
+        pickup_pose.header.frame_id = "map"
+        pickup_pose.header.stamp = rospy.Time.now()
+        pickup_pose.pose.position = target_object.get_position().point
+        pickup_pose.pose.position.x -= 0.21 * 3
+        pickup_pose.pose.orientation = Quaternion(x=0.0, y=0.0, z=0.0, w=1.0) 
+
+        return pickup_pose
 
     def execute(self, ud):
         # ud.target_object.add_pickup_location(ud.target_object.get_position())
         rospy.loginfo("Start of Optimisation")
                 ## 3 instances of class object_info
-        info_object_A = ud.pickup_info[0]#.get_position()
-        info_object_B = ud.pickup_info[1]#.get_position()
-        info_object_C = ud.pickup_info[2]#.get_position()
+        info_object_A = copy.deepcopy(ud.pickup_info[0])#.get_position()
+        info_object_B = copy.deepcopy(ud.pickup_info[1])#.get_position()
+        info_object_C = copy.deepcopy(ud.pickup_info[2])#.get_position()
         
                 ## get pose of the objects and label and save in dictionary format
                 ## pose is np.array([x,y]) and label is string 
@@ -154,7 +163,15 @@ class Optimise(smach.State):
             if min_path[l] == 'object_C':
                 ud.pickup_info[l] = info_object_C
         
-
+        ud.pickup_info[0].add_pickup_location(self._generate_pickup_pose(
+            copy.deepcopy(ud.pickup_info[0])
+        ))
+        ud.pickup_info[1].add_pickup_location(self._generate_pickup_pose(
+            copy.deepcopy(ud.pickup_info[1])
+        ))
+        ud.pickup_info[2].add_pickup_location(self._generate_pickup_pose(
+            copy.deepcopy(ud.pickup_info[2])
+        ))
 
         
         

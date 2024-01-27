@@ -118,7 +118,8 @@ if __name__ == "__main__":
         # optimise the order in which to pickup and dropoff objects
         smach.StateMachine.add("OPTIMISE", Optimise(),
                                transitions={"succeeded" : "NAVIGATE_TO_PICKUP"},
-                               remapping={"pickup_info" : "pickup_info"})
+                               remapping={"pickup_info" : "pickup_info",
+                                          "nav_goal_index" : "nav_goal_index"})
 
         # navigate to the object to be picked up
         smach.StateMachine.add("NAVIGATE_TO_PICKUP",

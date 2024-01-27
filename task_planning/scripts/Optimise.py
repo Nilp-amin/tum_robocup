@@ -5,7 +5,7 @@ import smach
 import copy
 
 from ObjectInfo import ObjectInfo
-from geometry_msgs.msg import Point, Quaternion, PoseStamped
+from geometry_msgs.msg import Quaternion, PoseStamped
 
 """This state optimises the order in which objects are to be
 picked up and dropped off to maximise efficiency.

@@ -19,9 +19,9 @@ grasp_postures_frame_id: "hand_palm_link"
 grasp_pose_frame_id: "base_footprint"
 
 # grasp desired distance for pre grasp, post grasp and place
-grasp_desired_distance: 0.25
+grasp_desired_distance: 0.15
 # grasp min distance for pre grasp, post grasp and place
-grasp_min_distance: 0.15
+grasp_min_distance: 0.1
 
 # Direction in reference of the grasp_postures_frame_id
 pre_grasp_direction_x: 0.0

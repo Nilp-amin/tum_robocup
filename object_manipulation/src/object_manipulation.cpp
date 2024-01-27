@@ -5,7 +5,8 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
                                        const std::string& camera_point_cloud_topic,
                                        const std::string& target_label_topic)
 : nh_{nh},
-  move_group_{"whole_body_light"} {}
+  move_group_{"whole_body_light"},
+  gripper_{"gripper"} {}
 
 bool ObjectManipulation::initalise()
 {
@@ -42,6 +43,8 @@ bool ObjectManipulation::initalise()
     // set moveit configurations
     move_group_.setPlannerId("RRTstarkConfigDefault");
     move_group_.setPoseReferenceFrame(grasp_pose_frame_id_);
+
+    gripper_.setGoalJointTolerance(0.05);
 
     ROS_INFO("Initalisation complete.");
 
@@ -386,6 +389,12 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
         auto result = move_group_.pick(goal);
         ROS_INFO("Waiting for result.");
         ROS_INFO("Pick result: %s", result == moveit::core::MoveItErrorCode::SUCCESS ? "SUCCESS" : "FAILED");
+        if (result != moveit::core::MoveItErrorCode::SUCCESS)
+        {
+            // open and close gripper to release any failed grasped objects
+            gripper_.setJointValueTarget("hand_motor_joint", 1.2);
+            gripper_.setJointValueTarget("hand_motor_joint", 0.0);
+        }
 
         res.succeeded = (result == moveit::core::MoveItErrorCode::SUCCESS);
     }

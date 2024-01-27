@@ -123,5 +123,6 @@ class LocateObject(smach.State):
             
                 self.look_new_sector(robot)
                 self._sector_count += 1
+                rospy.sleep(2.0)
 
         return status

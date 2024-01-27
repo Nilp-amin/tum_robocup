@@ -74,6 +74,7 @@ private:
     tf::TransformListener tf_listener_;                                         // access to tf tree for ros transformations
 
     moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface for whole body
+    moveit::planning_interface::MoveGroupInterface gripper_;                 // moveit move interface for whole body
     moveit::planning_interface::PlanningSceneInterface planning_interface_;     // moveit planning scene interface
 
     ros::ServiceServer pickup_service_;

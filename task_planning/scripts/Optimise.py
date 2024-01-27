@@ -27,6 +27,8 @@ class Optimise(smach.State):
 
         return pickup_pose
 
+    # TODO: use https://stackoverflow.com/questions/401847/circle-rectangle-collision-detection-intersection
+
     def execute(self, ud):
         ud.pickup_info[0].add_pickup_location(self._generate_pickup_pose(
             copy.deepcopy(ud.pickup_info[0])

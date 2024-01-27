@@ -87,7 +87,7 @@ class PickUp(smach.State):
     def execute(self, ud):
         status = "failed"
         with hsrb_interface.Robot() as robot:
-            self.look_down(robot)
+            self.look_down(robot) # TODO: could change this to use gaze_point to be more robust
             rospy.sleep(2.0)
 
             # wait until the sync subscriber has been called

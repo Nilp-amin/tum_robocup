@@ -21,8 +21,8 @@ class Optimise(smach.State):
     ROBOT_RADIUS_BUFFER = 0.15
     DIST_FROM_OBJECT = ROBOT_RADIUS * 3
     def __init__(self):
-        smach.State.__init__(self, outcomes=["succeeded", "failed"],
-                             input_keys=["pickup_info"],
+        smach.State.__init__(self, outcomes=["succeeded"],
+                             input_keys=["pickup_info", "nav_goal_index"],
                              output_keys=["pickup_info"])
 
         self._debug_pub = rospy.Publisher("/rviz_visual_tools", PoseArray, queue_size=10)
@@ -188,9 +188,9 @@ class Optimise(smach.State):
         # print(all_combinations_dic[5]) 
 
         ## get drop of location 
-        pose_stamped_msgA = info_object_A.get_dropoff_point()
-        pose_stamped_msgB = info_object_B.get_dropoff_point()
-        pose_stamped_msgC = info_object_C.get_dropoff_point()
+        pose_stamped_msgA = info_object_A.get_dropoff_location()
+        pose_stamped_msgB = info_object_B.get_dropoff_location()
+        pose_stamped_msgC = info_object_C.get_dropoff_location()
 
         place_drop_objectA = (pose_stamped_msgA.pose.position.x , pose_stamped_msgA.pose.position.y)
         place_drop_objectB = (pose_stamped_msgB.pose.position.x , pose_stamped_msgB.pose.position.y)

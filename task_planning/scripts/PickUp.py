@@ -73,6 +73,13 @@ class PickUp(smach.State):
         self._camera_cloud_msg = camera_cloud_msg
         self._sync_called = True
 
+    def _grasp(self, robot, angle:float) -> None:
+        """Moves the robot gripper to the desired angle.
+        """
+        gripper = robot.get("gripper", robot.Items.END_EFFECTOR)
+        gripper.command(angle)
+
+
     def look_down(self, robot):
         """Make the robot look down at the object.
         """
@@ -84,9 +91,15 @@ class PickUp(smach.State):
         whole_body = robot.get("whole_body")
         whole_body.move_to_go()
 
+    def close_gripper(self, robot) -> None:
+        """Closes the robot gripper.
+        """
+        self._grasp(robot, angle=0.0)
+
     def execute(self, ud):
         status = "failed"
         with hsrb_interface.Robot() as robot:
+            self.close_gripper(robot)
             self.look_down(robot) # TODO: could change this to use gaze_point to be more robust
             rospy.sleep(2.0)
 

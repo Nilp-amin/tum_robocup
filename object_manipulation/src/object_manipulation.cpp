@@ -241,7 +241,7 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         );
         trajectory_msgs::JointTrajectoryPoint jt_point2;
         jt_point2.time_from_start = ros::Duration(2.0);
-        jt_point2.effort = {-0.01};
+        jt_point2.effort = {-0.05};
         jt_point2.positions.insert(
             jt_point2.positions.begin(),
             gripper_grasp_positions_.begin(),
@@ -265,7 +265,7 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
             grasp.approach.z, grasp.binormal.z, grasp.axis.z,
         };
 
-        // fix the rotation of the gripper from gpd_ros to Tiago's convention
+        // fix the rotation of the gripper from gpd_ros to hsrb convention
         tf2::Quaternion quaternion;
         rotation_matrix.getRotation(quaternion);
         // rotate about x-axis by 180 deg
@@ -281,6 +281,14 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         grasp_pose.pose.orientation.y = quaternion.y();
         grasp_pose.pose.orientation.z = quaternion.z();
         grasp_pose.pose.orientation.w = quaternion.w();
+
+        // shift target pose back slightly to avoid gripper collision
+        // Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
+        // Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.1};
+        // auto shifted_position = T_base_target * shift_z_axis;
+        // grasp_pose.pose.position.x = shifted_position.x();
+        // grasp_pose.pose.position.y = shifted_position.y();
+        // grasp_pose.pose.position.z = shifted_position.z();
 
         moveit_grasp.grasp_pose = grasp_pose;
         moveit_grasp.grasp_quality = grasp.score.data;

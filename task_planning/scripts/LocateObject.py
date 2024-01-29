@@ -88,7 +88,7 @@ class LocateObject(smach.State):
         status = "aborted"
         with hsrb_interface.Robot() as robot:
             self.look_new_sector(robot, move_base=False)
-            rospy.sleep(2.0)
+            rospy.sleep(0.5)
 
             # keep looping until all sectors checked or min num of unique objects found
             while True:
@@ -123,6 +123,6 @@ class LocateObject(smach.State):
             
                 self.look_new_sector(robot)
                 self._sector_count += 1
-                rospy.sleep(2.0)
+                rospy.sleep(0.5)
 
         return status

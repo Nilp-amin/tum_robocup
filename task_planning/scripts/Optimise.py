@@ -15,8 +15,8 @@ from nav_msgs.msg import GridCells
 picked up and dropped off to maximise efficiency.
 """
 class Optimise(smach.State):
-    ROBOT_RADIUS = 0.21
-    ROBOT_RADIUS_BUFFER = 0.15
+    ROBOT_RADIUS = 0.22
+    ROBOT_RADIUS_BUFFER = 0.22
     DIST_FROM_OBJECT = ROBOT_RADIUS * 3
     def __init__(self):
         smach.State.__init__(self, 

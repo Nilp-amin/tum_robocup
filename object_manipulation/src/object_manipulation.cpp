@@ -282,14 +282,6 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         grasp_pose.pose.orientation.z = quaternion.z();
         grasp_pose.pose.orientation.w = quaternion.w();
 
-        // shift target pose back slightly to avoid gripper collision
-        // Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
-        // Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.1};
-        // auto shifted_position = T_base_target * shift_z_axis;
-        // grasp_pose.pose.position.x = shifted_position.x();
-        // grasp_pose.pose.position.y = shifted_position.y();
-        // grasp_pose.pose.position.z = shifted_position.z();
-
         moveit_grasp.grasp_pose = grasp_pose;
         moveit_grasp.grasp_quality = grasp.score.data;
 

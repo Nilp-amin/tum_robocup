@@ -6,7 +6,8 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
                                        const std::string& target_label_topic)
 : nh_{nh},
   move_group_{"whole_body_light"},
-  gripper_{"gripper"} {}
+  gripper_{"gripper"},
+  arm_{"arm"} {}
 
 bool ObjectManipulation::initalise()
 {
@@ -282,14 +283,6 @@ std::vector<moveit_msgs::Grasp> ObjectManipulation::createGrasps(const gpd_ros::
         grasp_pose.pose.orientation.z = quaternion.z();
         grasp_pose.pose.orientation.w = quaternion.w();
 
-        // shift target pose back slightly to avoid gripper collision
-        // Eigen::Affine3d T_base_target = poseMsgToEigen(grasp_pose.pose);
-        // Eigen::Vector3d shift_z_axis{0.0, 0.0, -0.1};
-        // auto shifted_position = T_base_target * shift_z_axis;
-        // grasp_pose.pose.position.x = shifted_position.x();
-        // grasp_pose.pose.position.y = shifted_position.y();
-        // grasp_pose.pose.position.z = shifted_position.z();
-
         moveit_grasp.grasp_pose = grasp_pose;
         moveit_grasp.grasp_quality = grasp.score.data;
 
@@ -402,6 +395,9 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
             // open and close gripper to release any failed grasped objects
             gripper_.setJointValueTarget("hand_motor_joint", 1.2);
             gripper_.setJointValueTarget("hand_motor_joint", 0.0);
+        } else
+        {
+            end_effector_pose_ = arm_.getCurrentPose();
         }
 
         res.succeeded = (result == moveit::core::MoveItErrorCode::SUCCESS);
@@ -413,5 +409,22 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
 bool ObjectManipulation::dropoffCallback(object_manipulation::Dropoff::Request&  req,
                                          object_manipulation::Dropoff::Response& res)
 {
+    // set pose to how the object was pick up
+    arm_.setPoseTarget(end_effector_pose_);
+    moveit::planning_interface::MoveGroupInterface::Plan drop_plan;
+
+    bool success = (arm_.plan(drop_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+    if (success)
+    {
+        ROS_INFO("Drop plan successful. Moveing to the target pose.");
+        arm_.move();
+    } else
+    {
+        ROS_ERROR("Drop plan failed. Unable to move to the target pose.");
+    }
+
+    res.succeeded = success;
+
     return true;
 }

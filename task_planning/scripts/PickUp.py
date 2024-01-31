@@ -100,7 +100,7 @@ class PickUp(smach.State):
         status = "failed"
         with hsrb_interface.Robot() as robot:
             self.close_gripper(robot)
-            self.look_down(robot) # TODO: could change this to use gaze_point to be more robust
+            self.look_down(robot)
             rospy.sleep(2.0)
 
             # wait until the sync subscriber has been called

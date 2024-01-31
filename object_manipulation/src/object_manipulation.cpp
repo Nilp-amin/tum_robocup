@@ -6,7 +6,8 @@ ObjectManipulation::ObjectManipulation(ros::NodeHandle& nh,
                                        const std::string& target_label_topic)
 : nh_{nh},
   move_group_{"whole_body_light"},
-  gripper_{"gripper"} {}
+  gripper_{"gripper"},
+  arm_{"arm"} {}
 
 bool ObjectManipulation::initalise()
 {
@@ -394,6 +395,9 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
             // open and close gripper to release any failed grasped objects
             gripper_.setJointValueTarget("hand_motor_joint", 1.2);
             gripper_.setJointValueTarget("hand_motor_joint", 0.0);
+        } else
+        {
+            end_effector_pose_ = arm_.getCurrentPose();
         }
 
         res.succeeded = (result == moveit::core::MoveItErrorCode::SUCCESS);
@@ -405,5 +409,22 @@ bool ObjectManipulation::pickupCallback(object_manipulation::Pickup::Request&  r
 bool ObjectManipulation::dropoffCallback(object_manipulation::Dropoff::Request&  req,
                                          object_manipulation::Dropoff::Response& res)
 {
+    // set pose to how the object was pick up
+    arm_.setPoseTarget(end_effector_pose_);
+    moveit::planning_interface::MoveGroupInterface::Plan drop_plan;
+
+    bool success = (arm_.plan(drop_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+
+    if (success)
+    {
+        ROS_INFO("Drop plan successful. Moveing to the target pose.");
+        arm_.move();
+    } else
+    {
+        ROS_ERROR("Drop plan failed. Unable to move to the target pose.");
+    }
+
+    res.succeeded = success;
+
     return true;
 }

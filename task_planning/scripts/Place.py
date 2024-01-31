@@ -5,6 +5,7 @@ import smach
 import hsrb_interface
 import math
 
+from object_manipulation.srv import *
 from hsrb_interface import geometry
 from geometry_msgs.msg import Pose
 
@@ -17,6 +18,8 @@ class Place(smach.State):
                              outcomes=["succeeded", "finished", "failed"],
                              input_keys=["current_pickup_index"],
                              output_keys=["current_pickup_index"])
+
+        rospy.wait_for_service("dropoff")
 
     def _grasp(self, robot, angle:float) -> None:
         """Moves the robot gripper to the desired angle.
@@ -31,6 +34,15 @@ class Place(smach.State):
         whole_body = robot.get("whole_body")
         whole_body.move_end_effector_pose(goal,
                                           ref_frame_id="base_footprint")
+
+    def _dropoff(self) -> bool:
+        try:
+            dropoff = rospy.ServiceProxy("dropoff", Dropoff)
+            return dropoff.call()
+        except rospy.ServiceException as e:
+            rospy.logwarn(f"Service call failed: {e}")
+
+        return None
 
     def open_gripper(self, robot) -> None:
         """Opens the robot gripper.

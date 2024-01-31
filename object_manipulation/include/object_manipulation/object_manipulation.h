@@ -75,6 +75,7 @@ private:
 
     moveit::planning_interface::MoveGroupInterface move_group_;                 // moveit move interface for whole body
     moveit::planning_interface::MoveGroupInterface gripper_;                 // moveit move interface for whole body
+    moveit::planning_interface::MoveGroupInterface arm_;                 // moveit move interface for whole body
     moveit::planning_interface::PlanningSceneInterface planning_interface_;     // moveit planning scene interface
 
     ros::ServiceServer pickup_service_;
@@ -113,6 +114,8 @@ private:
     std::vector<std::string> allowed_touch_objects_;
 
     std::vector<std::string> links_to_allow_contact_;
+
+    geometry_msgs::PoseStamped end_effector_pose_;
 };
 
 #endif

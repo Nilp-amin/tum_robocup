@@ -1,7 +1,7 @@
 way_points: {
     frame: "map",
     search_one: {
-        x: -0.5,
+        x: 0.0,
         y: 0.0,
         z: 0.0,
         w: 1.0
@@ -13,8 +13,8 @@ way_points: {
         w: 1.0
     },
     drop_Bottle: {
-        x: -2.45,
-        y: 0.8,
+        x: -0.5,
+        y: 0.0,
         z: 0.0,
         rx: 0.0,
         ry: 0.0,
@@ -22,8 +22,8 @@ way_points: {
         rw: 0.7071
     },
     drop_Cup: {
-        x: -2.27,
-        y: -0.78,
+        x: -0.5,
+        y: 0.0,
         z: 0.0,
         rx: 0.0,
         ry: 0.0,
@@ -31,7 +31,7 @@ way_points: {
         rw: 0.7071 
     },
     drop_Pringles: {
-        x: -2.64,
+        x: -0.5,
         y: 0.0,
         z: 0.0,
         rx: 0.0,

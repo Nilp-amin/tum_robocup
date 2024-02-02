@@ -10,6 +10,7 @@ import copy
 from typing import List
 from tf.transformations import quaternion_from_euler
 from ObjectInfo import ObjectInfo
+from LocateObject import LocateObject
 from geometry_msgs.msg import Point, Quaternion, PoseStamped, PointStamped, PoseArray
 from nav_msgs.msg import GridCells
 
@@ -155,50 +156,15 @@ class Optimise(smach.State):
         # ud.target_object.add_pickup_location(ud.target_object.get_position())
         rospy.loginfo("Start of Optimisation")
                 ## 3 instances of class object_info
-        info_object_A = copy.deepcopy(ud.pickup_info[0])#.get_position()
-        info_object_B = copy.deepcopy(ud.pickup_info[1])#.get_position()
-        info_object_C = copy.deepcopy(ud.pickup_info[2])#.get_position()
-        
-                ## get pose of the objects and label and save in dictionary format
-                ## pose is np.array([x,y]) and label is string 
-        # get pointstamp_msg for pose of the object (x,y)
-        point_stamped_msgA = info_object_A.get_position()
-        point_stamped_msgB = info_object_B.get_position()
-        point_stamped_msgC = info_object_C.get_position()
+        number_objects_detected = LocateObject.REQUIRED_OBJECT_COUNT
+        objects_info = []
 
-        # get the class label [["Cup", "Bottle", "Pringles"]]
-        class_objectA = info_object_A.get_class()
-        class_objectB = info_object_B.get_class()
-        class_objectC = info_object_C.get_class()
+        for n in range(0,number_objects_detected):
+            objects_info.append(copy.deepcopy(ud.pickup_info[n]))
+            
+        all_seq_objects = list(permutations(objects_info))
 
-
-        A = np.array([point_stamped_msgA.point.x , point_stamped_msgA.point.y])
-        B = np.array([point_stamped_msgB.point.x , point_stamped_msgB.point.y])
-        C = np.array([point_stamped_msgC.point.x , point_stamped_msgC.point.y])
-        
-        dict_objects = {
-            'object_A' : A,
-            'object_B' : B,
-            'object_C' : C 
-        }
- 
-        rospy.loginfo(dict_objects)
-        all_combinations_dic = list(permutations(dict_objects))
-        # print(len(all_combinations_dic))
-        # print(all_combinations_dic[5]) 
-
-        ## get drop of location 
-        pose_stamped_msgA = info_object_A.get_dropoff_location()
-        pose_stamped_msgB = info_object_B.get_dropoff_location()
-        pose_stamped_msgC = info_object_C.get_dropoff_location()
-
-        place_drop_objectA = (pose_stamped_msgA.pose.position.x , pose_stamped_msgA.pose.position.y)
-        place_drop_objectB = (pose_stamped_msgB.pose.position.x , pose_stamped_msgB.pose.position.y)
-        place_drop_objectC = (pose_stamped_msgC.pose.position.x , pose_stamped_msgC.pose.position.y)
-
-        totall_distance = 0 #### HIER IN LOOP DA ICH ES 0ELN MUSS
-        list_totall_distance = []
-        list_totall_path = []
+       
         ## start position -> Robot in position search_one or search_two
         if ud.nav_goal_index == 1:
              waypoint_two = rospy.get_param("/way_points/search_two")
@@ -209,80 +175,50 @@ class Optimise(smach.State):
              waypoint_one = rospy.get_param("/way_points/search_one")
         #      start = (waypoint_two['search_two']['x'] , waypoint_two['search_one']['y'] )
              start = (waypoint_one['x'] , waypoint_one['y'] )
-             
 
-
-        for j in range (0,len(all_combinations_dic)):
-                sequence_order = all_combinations_dic[j]
-                print(j)
-                for i in range(0,len(sequence_order)): # for A , B, C 
-                # print(totall_distance)
+        totall_distance = 0
+        list_totall_distance = []
+        for m,sequence in enumerate(all_seq_objects):
+            previous_object_info = 0
+            for i,object_info in enumerate(sequence):
+                pose_object= object_info.get_position()
+                drop_pose = object_info.get_dropoff_point()
+                class_object = object_info.get_class()
+                # print("Round ", m, "the label is ", class_object)
+                distance_to_drop = 0
                 # print(i)
-                        if i == 0:
-                            if  sequence_order[i] == 'object_A':
-                                print('First go to object_A, pick up and bring to place_drop_objectA')
-                                start_distance = np.linalg.norm(A-start)
-                                distance = np.linalg.norm(place_drop_objectA - A)
-                                totall_distance += distance + start_distance
-                            if  sequence_order[i] == 'object_B':
-                                print('First go to object_B, pick up and bring to place_drop_objectB')
-                                start_distance = np.linalg.norm(B-start)
-                                distance = np.linalg.norm(place_drop_objectB - B)
-                                totall_distance += distance + start_distance
-                            if  sequence_order[i] == 'object_C':
-                                print('First go to object_C and , pick up bring to place_drop_objectC')
-                                start_distance = np.linalg.norm(C-start)
-                                distance = np.linalg.norm(place_drop_objectC - C)
-                                totall_distance += distance + start_distance
-                        else:
-                            if  sequence_order[i] == 'object_A':
-                                print('Go to object_A, pick up and bring to place_drop_objectA')
-                                if sequence_order[i-1] == 'object_B':
-                                    distance_back_object = np.linalg.norm(A-place_drop_objectB)
-                                if sequence_order[i-1] == 'object_C':
-                                    distance_back_object = np.linalg.norm(A-place_drop_objectC)
-                                distance = np.linalg.norm(place_drop_objectA - A)
-                                totall_distance += distance + distance_back_object
-                            if  sequence_order[i] == 'object_B':
-                                print('Go to object_B and bring to place_drop_objectB')
-                                if sequence_order[i-1] == 'object_A':
-                                    distance_back_object = np.linalg.norm(B-place_drop_objectA)
-                                if sequence_order[i-1] == 'object_C':
-                                    distance_back_object = np.linalg.norm(B-place_drop_objectC)
-                                distance = np.linalg.norm(place_drop_objectB - B)
-                                totall_distance += distance + distance_back_object
-                            if  sequence_order[i] == 'object_C':
-                                print('Go to object_C and bring to place_drop_objectC')
-                                if sequence_order[i-1] == 'object_A':
-                                    distance_back_object = np.linalg.norm(C-place_drop_objectA)
-                                if sequence_order[i-1] == 'object_B':
-                                    distance_back_object = np.linalg.norm(C-place_drop_objectB)
-                                distance = np.linalg.norm(place_drop_objectC - C)
-                                totall_distance += distance + distance_back_object
-                print('The totall distance for the Path', sequence_order, 'is', totall_distance)
+                # print("Round", m)
+                # print("Pick up the object", class_object)
+                # print(totall_distance)
+                if i == 0:          # Distance from Start position (search one or two) till first object to pick up 
+                    start_distance = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) - start)
+                    # drop_pose = rospy.get_param(f"/way_points/drop_{object_info.get_class()}") 
+                    distance_to_drop = np.linalg.norm(np.array([drop_pose.pose.position.x , drop_pose.pose.position.y])- np.array([pose_object.point.x, pose_object.point.y]))
+                    totall_distance += distance_to_drop + start_distance
+                    # print("First round",class_object)
+                else:
+                                    # need the drop_pose from the previous round -> previous drop_pose is starting point to pick up next objects
+                    # print("previous class" , previous_object_info.get_class())
+                    # print("actual class", class_object)
+                    previous_drop_pose = previous_object_info.get_dropoff_point()
+                    distance_back_object = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) -np.array([previous_drop_pose.pose.position.x , previous_drop_pose.pose.position.y]) )     # distance to pick next object (left) from previous_drop_pose
+                    distance_to_drop = np.linalg.norm(np.array([drop_pose.pose.position.x , drop_pose.pose.position.y])- np.array([pose_object.point.x, pose_object.point.y]))
+                    totall_distance += distance_back_object + distance_to_drop
+                previous_object_info = object_info
+            print(totall_distance)
+            list_totall_distance.insert(m, totall_distance)
+            totall_distance = 0
 
-                list_totall_distance.insert(j,totall_distance)
-                list_totall_path.insert(j,sequence_order)
-                totall_distance = 0
+        index_shorest_path = list_totall_distance.index(min(list_totall_distance))
 
-        
-        # print(min_distance.index(min(min_distance)))
-        min_distance = min(list_totall_distance)
-        min_path = list_totall_path[list_totall_distance.index(min(list_totall_distance))]
-        print('The shortest path is', min_path, 'and has a distance of', min_distance)
+        for z,object_info in enumerate(all_seq_objects[index_shorest_path]):
+            ud.pickup_info[z] = object_info    
 
-        #            ## 3 instances of class object_info
-        # info_object_A = ud.pickup_info[0]#.get_position()
-        # info_object_B = ud.pickup_info[1]#.get_position()
-        # info_object_C = ud.pickup_info[2]#.get_position()
-        
-        for l in range(0,len(min_path)):
-            if min_path[l] == 'object_A':
-                ud.pickup_info[l] = info_object_A
-            if min_path[l] == 'object_B':
-                ud.pickup_info[l] = info_object_B
-            if min_path[l] == 'object_C':
-                ud.pickup_info[l] = info_object_C
+
+
+
+ 
+
 
         self._add_pickup_poses(ud)
 

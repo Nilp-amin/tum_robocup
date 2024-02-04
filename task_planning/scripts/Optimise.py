@@ -154,14 +154,13 @@ class Optimise(smach.State):
 
     def execute(self, ud):
         rospy.loginfo("Start of Optimisation")
-
+        # get list of all the objects detected by LocateObject
         objects_info = []
         for object_info in ud.pickup_info:
             objects_info.append(copy.deepcopy(object_info))
-            
+        # get all possible combination for picking up the objects
         all_seq_objects = list(permutations(objects_info))
-       
-        ## start position -> Robot in position search_one or search_two
+        # start position -> Robot either in position search_one or search_two
         if ud.nav_goal_index == 1:
              waypoint_two = rospy.get_param("/way_points/search_two")
              start = (waypoint_two['x'] , waypoint_two['y'] )
@@ -178,27 +177,22 @@ class Optimise(smach.State):
                 pose_object= object_info.get_position()
                 drop_pose = object_info.get_dropoff_location()
                 distance_to_drop = 0
-                if i == 0:          # Distance from Start position (search one or two) till first object to pick up 
+                if i == 0:          # Distance from Start position (search one or search two) till first object to pick up 
                     start_distance = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) - start)
-                    # drop_pose = rospy.get_param(f"/way_points/drop_{object_info.get_class()}") 
                     distance_to_drop = np.linalg.norm(np.array([drop_pose.pose.position.x , drop_pose.pose.position.y])- np.array([pose_object.point.x, pose_object.point.y]))
                     totall_distance += distance_to_drop + start_distance
-                    # print("First round",class_object)
                 else:
                                     # need the drop_pose from the previous round -> previous drop_pose is starting point to pick up next objects
-                    # print("previous class" , previous_object_info.get_class())
-                    # print("actual class", class_object)
                     previous_drop_pose = previous_object_info.get_dropoff_location()
                     distance_back_object = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) -np.array([previous_drop_pose.pose.position.x , previous_drop_pose.pose.position.y]) )     # distance to pick next object (left) from previous_drop_pose
                     distance_to_drop = np.linalg.norm(np.array([drop_pose.pose.position.x , drop_pose.pose.position.y])- np.array([pose_object.point.x, pose_object.point.y]))
                     totall_distance += distance_back_object + distance_to_drop
                 previous_object_info = object_info
-            print(totall_distance)
             list_totall_distance.append(totall_distance)
             totall_distance = 0
 
         index_shorest_path = list_totall_distance.index(min(list_totall_distance))
-
+        # load the objects in pickup_info in the sequence which minises the totall distance
         for z,object_info in enumerate(all_seq_objects[index_shorest_path]):
             ud.pickup_info[z] = object_info    
 

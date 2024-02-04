@@ -13,7 +13,7 @@ way_points: {
         w: 1.0
     },
     drop_Bottle: {
-        x: -0.5,
+        x: -0.7,
         y: 0.0,
         z: 0.0,
         rx: 0.0,
@@ -22,7 +22,7 @@ way_points: {
         rw: 0.7071
     },
     drop_Cup: {
-        x: -0.5,
+        x: -0.7,
         y: 0.0,
         z: 0.0,
         rx: 0.0,
@@ -31,7 +31,7 @@ way_points: {
         rw: 0.7071 
     },
     drop_Pringles: {
-        x: -0.5,
+        x: -0.7,
         y: 0.0,
         z: 0.0,
         rx: 0.0,

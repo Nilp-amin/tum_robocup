@@ -172,11 +172,11 @@ class Optimise(smach.State):
 
         totall_distance = 0
         list_totall_distance = []
-        for sequence in enumerate(all_seq_objects):
+        for sequence in all_seq_objects:
             previous_object_info = 0
             for i,object_info in enumerate(sequence):
                 pose_object= object_info.get_position()
-                drop_pose = object_info.get_dropoff_point()
+                drop_pose = object_info.get_dropoff_location()
                 distance_to_drop = 0
                 if i == 0:          # Distance from Start position (search one or two) till first object to pick up 
                     start_distance = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) - start)
@@ -188,7 +188,7 @@ class Optimise(smach.State):
                                     # need the drop_pose from the previous round -> previous drop_pose is starting point to pick up next objects
                     # print("previous class" , previous_object_info.get_class())
                     # print("actual class", class_object)
-                    previous_drop_pose = previous_object_info.get_dropoff_point()
+                    previous_drop_pose = previous_object_info.get_dropoff_location()
                     distance_back_object = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) -np.array([previous_drop_pose.pose.position.x , previous_drop_pose.pose.position.y]) )     # distance to pick next object (left) from previous_drop_pose
                     distance_to_drop = np.linalg.norm(np.array([drop_pose.pose.position.x , drop_pose.pose.position.y])- np.array([pose_object.point.x, pose_object.point.y]))
                     totall_distance += distance_back_object + distance_to_drop

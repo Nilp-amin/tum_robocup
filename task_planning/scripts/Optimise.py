@@ -153,43 +153,31 @@ class Optimise(smach.State):
         self._debug_pub.publish(pose_array_msg)
 
     def execute(self, ud):
-        # ud.target_object.add_pickup_location(ud.target_object.get_position())
         rospy.loginfo("Start of Optimisation")
-                ## 3 instances of class object_info
-        number_objects_detected = LocateObject.REQUIRED_OBJECT_COUNT
-        objects_info = []
 
-        for n in range(0,number_objects_detected):
-            objects_info.append(copy.deepcopy(ud.pickup_info[n]))
+        objects_info = []
+        for object_info in ud.pickup_info:
+            objects_info.append(copy.deepcopy(object_info))
             
         all_seq_objects = list(permutations(objects_info))
-
        
         ## start position -> Robot in position search_one or search_two
         if ud.nav_goal_index == 1:
              waypoint_two = rospy.get_param("/way_points/search_two")
-        #      start = (waypoint_one['search_one']['x'] , waypoint_one['search_one']['y'] )
              start = (waypoint_two['x'] , waypoint_two['y'] )
              
         elif ud.nav_goal_index == 2:
              waypoint_one = rospy.get_param("/way_points/search_one")
-        #      start = (waypoint_two['search_two']['x'] , waypoint_two['search_one']['y'] )
              start = (waypoint_one['x'] , waypoint_one['y'] )
 
         totall_distance = 0
         list_totall_distance = []
-        for m,sequence in enumerate(all_seq_objects):
+        for sequence in enumerate(all_seq_objects):
             previous_object_info = 0
             for i,object_info in enumerate(sequence):
                 pose_object= object_info.get_position()
                 drop_pose = object_info.get_dropoff_point()
-                class_object = object_info.get_class()
-                # print("Round ", m, "the label is ", class_object)
                 distance_to_drop = 0
-                # print(i)
-                # print("Round", m)
-                # print("Pick up the object", class_object)
-                # print(totall_distance)
                 if i == 0:          # Distance from Start position (search one or two) till first object to pick up 
                     start_distance = np.linalg.norm(np.array([pose_object.point.x, pose_object.point.y]) - start)
                     # drop_pose = rospy.get_param(f"/way_points/drop_{object_info.get_class()}") 
@@ -206,19 +194,13 @@ class Optimise(smach.State):
                     totall_distance += distance_back_object + distance_to_drop
                 previous_object_info = object_info
             print(totall_distance)
-            list_totall_distance.insert(m, totall_distance)
+            list_totall_distance.append(totall_distance)
             totall_distance = 0
 
         index_shorest_path = list_totall_distance.index(min(list_totall_distance))
 
         for z,object_info in enumerate(all_seq_objects[index_shorest_path]):
             ud.pickup_info[z] = object_info    
-
-
-
-
- 
-
 
         self._add_pickup_poses(ud)
 

@@ -158,9 +158,9 @@ void ObjectManipulation::createPlanningScene(const geometry_msgs::PointStamped& 
         shape_msgs::SolidPrimitive target_primitive;
         target_primitive.type = target_primitive.BOX;
         target_primitive.dimensions.resize(3);
-        target_primitive.dimensions[target_primitive.BOX_X] = 0.02;
-        target_primitive.dimensions[target_primitive.BOX_Y] = 0.02;
-        target_primitive.dimensions[target_primitive.BOX_Z] = 0.02;
+        target_primitive.dimensions[target_primitive.BOX_X] = 0.005;
+        target_primitive.dimensions[target_primitive.BOX_Y] = 0.005;
+        target_primitive.dimensions[target_primitive.BOX_Z] = 0.005;
 
         target_collision_object.primitives.push_back(target_primitive);
         target_collision_object.primitive_poses.push_back(target_object_pose.pose);

@@ -91,7 +91,7 @@ roslaunch hsrb_amcl acml_hsrb_realworld.launch
 ```
 roslaunch task_planning task_manager.launch
 ```
-8. Optionally, if you would like to visualise the system with RViZ the below commands can be run after opening a new terminal window:
+8. Optionally, if you would like to visualise the system with RViZ the below commands can be run after opening a new terminal window. Make sure to use the RViZ configuration file found in the folder located at *~/catkin_ws/src/tum_robocup/simulation_env/config/hsrb_full.rviz* :
 ```
 hsrb_mode
 rosrun rviz rviz  -d `rospack find hsrb_common_launch`/config/hsrb_display_full_hsrb.rviz

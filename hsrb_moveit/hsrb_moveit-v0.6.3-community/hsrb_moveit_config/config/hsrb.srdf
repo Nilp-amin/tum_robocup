@@ -82,7 +82,7 @@
     <disable_collisions link1="arm_flex_link" link2="base_range_sensor_link" reason="Never" />
     <disable_collisions link1="arm_flex_link" link2="base_l_drive_wheel_link" reason="Never" />
     <disable_collisions link1="arm_flex_link" link2="base_l_passive_wheel_z_link" reason="Never" />
-    <disable_collisions link1="arm_flex_link" link2="base_link" reason="Never" />
+    <!-- <disable_collisions link1="arm_flex_link" link2="base_link" reason="Never" /> -->
     <disable_collisions link1="arm_flex_link" link2="base_r_drive_wheel_link" reason="Never" />
     <disable_collisions link1="arm_flex_link" link2="base_r_passive_wheel_z_link" reason="Never" />
     <disable_collisions link1="arm_flex_link" link2="base_f_bumper_link" reason="Never" />

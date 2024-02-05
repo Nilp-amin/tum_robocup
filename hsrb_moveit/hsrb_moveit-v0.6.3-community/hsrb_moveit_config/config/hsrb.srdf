@@ -206,6 +206,9 @@
     <disable_collisions link1="base_link" link2="head_tilt_link" reason="Never" />
     <disable_collisions link1="base_link" link2="torso_lift_link" reason="Adjacent" />
     <disable_collisions link1="base_link" link2="wrist_flex_link" reason="Never" />
+
+    <disable_collisions link1="base_link" link2="hand_l_spring_proximal_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="hand_r_spring_proximal_link" reason="Never" />
     <disable_collisions link1="base_r_drive_wheel_link" link2="base_r_passive_wheel_z_link" reason="Adjacent" />
     <disable_collisions link1="base_r_drive_wheel_link" link2="base_f_bumper_link" reason="Never" />
     <disable_collisions link1="base_r_drive_wheel_link" link2="base_b_bumper_link" reason="Never" />

@@ -97,6 +97,10 @@ hsrb_mode
 rosrun rviz rviz  -d `rospack find hsrb_common_launch`/config/hsrb_display_full_hsrb.rviz
 ```
 
+
+# Network Training (Optional)
+To find information about the training of the network and associated files, there is a seperate readme file: [TrainingReadme](./object_detection_world/training/Readme.md)
+
 ## Tasks
 1. Nilp - Object Manipulation 
 2. Nikolas - Object detection

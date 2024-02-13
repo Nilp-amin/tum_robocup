@@ -102,7 +102,7 @@ rosrun rviz rviz  -d `rospack find hsrb_common_launch`/config/hsrb_display_full_
 To find information about the training of the network and associated files, it is located at object_detection_world/scripts/training. There is a seperate readme file: [TrainingReadme](./object_detection_world/scripts/training/Readme.md)
 
 ## Tasks
-1. Nilp - Object Manipulation 
+1. Nilp - Object manipulation 
 2. Nikolas - Object detection
 3. Sahil - Task planning
 
